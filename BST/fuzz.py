@@ -2,7 +2,7 @@ import sys
 import random
 from collections import Counter
 from bst import BinarySearchTree
-from state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
+from BST.generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
 from generators.RL import RLOracle
 from generators.Random import RandomOracle
 

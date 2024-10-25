@@ -28,17 +28,23 @@ def generate_student(oracle):
             tag_name = oracle.select(tag_options, None)
             tag = ET.Element(tag_name)
         # Children part
-        num_children = oracle.select(num_children_options)
-        if depth < MAX_DEPTH and num_children > 0:
-            for _ in range(num_children):
-                child = _generate_student(oracle, tag, depth + 1)
-                if child != None:
-                    tag.append(child)
+        if depth < MAX_DEPTH:
+            num_children = oracle.select(num_children_options)
+            if num_children > 0:
+                for _ in range(num_children):
+                    child = _generate_student(oracle, tag, depth + 1)
+                    if child != None:
+                        tag.append(child)
+            else:
+                # Add text
+                text = random.choice(text_options)
+                tag.text = text
         else:
             # Add text
-            text = oracle.select(text_options)
+            text = random.choice(text_options)
             tag.text = text
         return tag
+
     student = _generate_student(oracle, None, 0)
     return Student(student)
 

@@ -27,20 +27,26 @@ def generate_pom(oracle):
             tag.set('xsi:schemaLocation',
                     'http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd')
         else:
-            tag_name = oracle.select(tag_options, None)
+            tag_name = oracle.select(tag_options, 1)
             tag = ET.Element(tag_name)
         # Children part
-        num_children = oracle.select(num_children_options)
-        if depth < MAX_DEPTH and num_children > 0:
-            for _ in range(num_children):
-                child = _generate_pom(oracle, tag, depth + 1)
-                if child != None:
-                    tag.append(child)
+        if depth < MAX_DEPTH:
+            num_children = oracle.select(num_children_options, 2)
+            if num_children > 0:
+                for _ in range(num_children):
+                    child = _generate_pom(oracle, tag, depth + 1)
+                    if child != None:
+                        tag.append(child)
+            else:
+                # Add text (can be also learned by oracle.select(text_options, 3))
+                text = "Leaf text"
+                tag.text = text
         else:
-            # Add text
-            text = oracle.select(text_options)
+            # Add text (can be also learned by oracle.select(text_options, 3))
+            text = "Leaf text"
             tag.text = text
         return tag
+
     pom = _generate_pom(oracle, None, 0)
     return POM(pom)
 
@@ -49,7 +55,7 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
-    trials = 1000000
+    trials = 100000
     for i in range(trials):
         print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), (len(valid_set) * 100 / valids) if valids != 0 else 0), end='\r')
