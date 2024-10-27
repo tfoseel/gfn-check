@@ -5,7 +5,8 @@ import xmlschema
 class POM:
     def __init__(self, xml):
         self.schema = xmlschema.XMLSchema("maven-4.0.0.xsd")
-        self.xml = xml
+        self.xml = ET.tostring(xml, encoding='utf-8',
+                               xml_declaration=True).decode('utf-8')
 
     def valid(self):
         try:
@@ -28,7 +29,3 @@ class POM:
         else:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
-
-    def __repr__(self):
-        self.indent(self.xml)
-        return ET.tostring(self.xml, encoding='unicode')

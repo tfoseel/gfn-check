@@ -3,9 +3,11 @@ import sys
 from collections import Counter
 import json
 import xml.etree.ElementTree as ET
-
 from student import Student
+from generators.state_abstraction import parent_state_ngram_fn, index_parent_state_ngram_fn, sequence_ngram_fn
 from generators.Random import RandomOracle
+from generators.RL import RLOracle
+
 
 MAX_DEPTH = 6
 
@@ -29,7 +31,8 @@ def generate_student(oracle):
             tag = ET.Element(tag_name)
         # Children part
         if depth < MAX_DEPTH:
-            num_children = oracle.select(num_children_options)
+            num_children = oracle.select(
+                num_children_options[0 if node is not None else 1:], 2)
             if num_children > 0:
                 for _ in range(num_children):
                     child = _generate_student(oracle, tag, depth + 1)
@@ -53,7 +56,7 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
-    trials = 100000
+    trials = 10000
     for i in range(trials):
         print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), (len(valid_set) * 100 / valids) if valids != 0 else 0), end='\r')
@@ -79,3 +82,13 @@ if __name__ == '__main__':
     print("====Random====")
     oracle_r = RandomOracle()
     fuzz(oracle_r)
+    print("====RL: Sequence====")
+    oracle_s = RLOracle(sequence_ngram_fn(4), epsilon=0.25)
+    fuzz(oracle_s, unqiue_valid=20, valid=0, invalid=-1)
+    print("====RL: Tree====")
+    oracle_t = RLOracle(parent_state_ngram_fn(4, MAX_DEPTH), epsilon=0.25)
+    fuzz(oracle_t, unqiue_valid=20, valid=0, invalid=-1)
+    print("====RL: Tree Index====")
+    oracle_idxt = RLOracle(
+        index_parent_state_ngram_fn(4, MAX_DEPTH), epsilon=0.25)
+    fuzz(oracle_idxt, unqiue_valid=20, valid=0, invalid=-1)
