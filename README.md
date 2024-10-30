@@ -19,7 +19,12 @@ The version of Python is ```3.11.3```.
 To clone the project, run the following commands:
 ```bash
 git clone https://github.com/tfoseel/gfn-check
-pip install -r requirements.txt
+```
+Please create conda environment and install the requirements:
+```bash
+conda create -n gfn-check python=3.11
+conda activate gfn-check
+python3 -m pip install -r requirements.txt
 ```
 We have 3 tasks. The structure of each task resembles that of python implementation of BST task in [Reddy et al. [1]](https://github.com/sameerreddy13/rlcheck).
 
