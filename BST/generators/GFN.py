@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import random
+import math
 
 # Function to parse the input string into tokens
 def parse_sequence(input_string):
@@ -14,7 +15,7 @@ def encode_tokens(tokens):
     """Assigns unique integer indices to each token and encodes the sequence."""
     unique_values = sorted(set([token for token in tokens if token not in ["TRUE", "FALSE"]]))
     value_to_index = {val: i for i, val in enumerate(unique_values)}
-    boolean_to_index = {"TRUE": len(unique_values), "FALSE": len(unique_values) + 1}
+    boolean_to_index = {"TRUE": 11, "FALSE": 12}
 
     # Encode each token as an integer index
     sequence_indices = [
@@ -135,8 +136,9 @@ class GFNLearner:
             action_idx = random.choice(np.flatnonzero(
                 self.action_values == self.action_values.max()))  # break ties randomly
             choice = domain[action_idx]
+            log_pf = math.log(self.action_values[action_idx])
         self.choice_state_sequence.append([state, choice, 0])
-        return choice
+        return choice, log_pf
     
 
         
