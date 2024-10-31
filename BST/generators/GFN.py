@@ -13,17 +13,21 @@ def parse_sequence(input_string):
 # Function to map tokens to integer indices
 def encode_tokens(tokens):
     """Assigns unique integer indices to each token and encodes the sequence."""
-    unique_values = sorted(set([token for token in tokens if token not in ["TRUE", "FALSE"]]))
-    value_to_index = {val: i for i, val in enumerate(unique_values)}
+    # unique_values = sorted(set([token for token in tokens if token not in ["TRUE", "FALSE"]]))
+    # value_to_index = {val: i for i, val in enumerate(unique_values)}
+
     boolean_to_index = {"TRUE": 11, "FALSE": 12}
 
     # Encode each token as an integer index
+    import pdb; pdb.set_trace()
     sequence_indices = [
-        value_to_index[token] if token in value_to_index else boolean_to_index[token]
+        token if token not in ["TRUE, FALSE"] else boolean_to_index[token]
         for token in tokens
     ]
+
+    return torch.tensor(sequence_indices), 13  # (sequence tensor, vocab size)
     
-    return torch.tensor(sequence_indices), len(unique_values) + 2  # (sequence tensor, vocab size)
+    # return torch.tensor(sequence_indices), len(unique_values) + 2  # (sequence tensor, vocab size)
 
 # Function to initialize the embedding and LSTM layers
 def initialize_model(vocab_size, embedding_dim=8, num_actions=16):
@@ -56,7 +60,7 @@ def process_sequence(input_string, embedding_layer, lstm_layer):
 
 
 # Example usage
-input_string = "a->TRUE->b->FALSE->c->TRUE"
+input_string = "2->TRUE->8->FALSE->3->TRUE"
 tokens = parse_sequence(input_string)
 sequence_tensor, vocab_size = encode_tokens(tokens)
 
@@ -75,7 +79,7 @@ print(hidden)
 print("LSTM Cell State:")
 print(cell)
 
-class GFNLracle:
+class GFNOracle:
     def __init__(self, abstract_state_fn, epsilon=0.25, gamma=1.0, initial_val=0):
         self.abstract_state_fn = abstract_state_fn
         self.learners = {}
@@ -96,9 +100,9 @@ class GFNLracle:
         if not idx in self.learners:
             self.learners[idx] = GFNLearner(
                 self.epsilon, self.gamma, self.initial_val, embedding_dim=8, hidden_size=len(domain[idx]))
-        choice = self.learners[idx].policy(domain, abstract_state)
+        choice, log_pf = self.learners[idx].policy(domain, abstract_state)
         self.choice_sequence.append(choice)
-        return choice
+        return choice, log_pf
 
     # updates upon full episodes
     def reward(self, reward):
@@ -111,7 +115,10 @@ class GFNLracle:
 class GFNLearner:
     def __init__(self,  epsilon=0.25, gamma=1.0, learning_rate=0.01, initial_val=0, embedding_dim=8, hidden_size=16):
         self.embedding_layer_pf = nn.Embedding(num_embeddings=1, embedding_dim=embedding_dim)
+        self.embedding_layer_pb = nn.Embedding(num_embeddings=1, embedding_dim=embedding_dim)
         self.lstm_layer_pf = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_size, batch_first=True)
+        self.lstm_layer_pb = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_size, batch_first=True)
+
         self.lr = learning_rate
         self.epsilon = epsilon
         self.gamma = gamma
