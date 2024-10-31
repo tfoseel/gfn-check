@@ -2,10 +2,9 @@ import sys
 import random
 from collections import Counter
 from bst import BinarySearchTree
-from BST.generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
-from generators.RL import RLOracle
+from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
 from generators.Random import RandomOracle
-
+from generators.RL import RLOracle
 
 MAX_DEPTH = 4
 
