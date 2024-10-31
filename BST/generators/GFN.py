@@ -147,5 +147,6 @@ class GFNLearner:
         self.choice_state_sequence.append([state, choice, 0])
         return choice, log_pf
     
+    
 
         
