@@ -7,6 +7,7 @@ from pom import POM
 from generators.state_abstraction import parent_state_ngram_fn, index_parent_state_ngram_fn, sequence_ngram_fn
 from generators.Random import RandomOracle
 from generators.RL import RLOracle
+from generators._GFN import GFNOracle
 
 MAX_DEPTH = 6
 
