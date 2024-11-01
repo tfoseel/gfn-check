@@ -5,14 +5,9 @@ import numpy as np
 import random
 import math
 
-# Function to parse the input string into tokens
-
-
 def parse_sequence(input_string):
     tokens = input_string.split("->")
     return tokens
-
-# Function to map tokens to integer indices
 
 
 def encode_tokens(tokens):
@@ -23,8 +18,6 @@ def encode_tokens(tokens):
     boolean_to_index = {"TRUE": 11, "FALSE": 12}
 
     # Encode each token as an integer index
-    import pdb
-    pdb.set_trace()
     sequence_indices = [
         token if token not in ["TRUE, FALSE"] else boolean_to_index[token]
         for token in tokens
@@ -32,11 +25,8 @@ def encode_tokens(tokens):
 
     return torch.tensor(sequence_indices), 13  # (sequence tensor, vocab size)
 
-    # return torch.tensor(sequence_indices), len(unique_values) + 2  # (sequence tensor, vocab size)
 
 # Function to initialize the embedding and LSTM layers
-
-
 def initialize_model(vocab_size, embedding_dim=8, num_actions=16):
     """Initializes the embedding layer and LSTM model."""
     embedding_layer = nn.Embedding(
