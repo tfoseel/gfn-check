@@ -12,6 +12,7 @@ def parse_sequence(input_string):
     tokens = input_string.split("->")
     return tokens
 
+
 def encode_tokens(tokens):
     """Assigns unique integer indices to each token and encodes the sequence."""
     boolean_to_index = {"TRUE": 11, "FALSE": 12}
@@ -48,12 +49,14 @@ def process_sequence(input_string, embedding_layer, lstm_layer):
     if len(sequence_indices) == 0:
         # Return a uniform distribution for the output if the sequence is empty
         output_dim = lstm_layer.hidden_size  # Adjust to match LSTM's output size
-        output = torch.full((output_dim,), 1 / output_dim)  # Uniform softmax-like output
+        # Uniform softmax-like output
+        output = torch.full((output_dim,), 1 / output_dim)
         return output
 
     # Pass through embedding layer
     sequence_indices = sequence_indices.long()  # Ensure indices are Long type
-    embedded_sequence = embedding_layer(sequence_indices.unsqueeze(0))  # Add batch dim
+    embedded_sequence = embedding_layer(
+        sequence_indices.unsqueeze(0))  # Add batch dim
 
     # Pass through LSTM layer
     output, (_, _) = lstm_layer(embedded_sequence)
@@ -66,8 +69,9 @@ def process_sequence(input_string, embedding_layer, lstm_layer):
 
     return output
 
+
 # Example usage
-input_string = "2->TRUE->8->FALSE->3->TRUE"
+input_string = ""
 tokens = parse_sequence(input_string)
 sequence_tensor, vocab_size = encode_tokens(tokens)
 
@@ -78,15 +82,11 @@ embedding_layer, lstm_layer = initialize_model(
     vocab_size, embedding_dim, hidden_size)
 
 # Process the sequence
-output, hidden, cell = process_sequence(
-    input_string, embedding_layer, lstm_layer)
+output = process_sequence(input_string, embedding_layer, lstm_layer)
 
 print("LSTM Output Tensor:")
+print(output.shape)
 print(output.sum())
-print("LSTM Hidden State:")
-print(hidden)
-print("LSTM Cell State:")
-print(cell)
 
 
 class GFNOracle:
@@ -158,6 +158,3 @@ class GFNLearner:
             log_pf = math.log(self.action_values[action_idx])
         self.choice_state_sequence.append([state, choice, 0])
         return choice, log_pf
-    
-
-        
