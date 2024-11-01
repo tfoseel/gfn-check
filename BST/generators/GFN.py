@@ -5,21 +5,23 @@ import numpy as np
 import random
 import math
 
+
 def parse_sequence(input_string):
+    if not input_string:  # Check if the input string is empty
+        return []  # Return an empty list of tokens
     tokens = input_string.split("->")
     return tokens
 
-
 def encode_tokens(tokens):
     """Assigns unique integer indices to each token and encodes the sequence."""
-    # unique_values = sorted(set([token for token in tokens if token not in ["TRUE", "FALSE"]]))
-    # value_to_index = {val: i for i, val in enumerate(unique_values)}
-
     boolean_to_index = {"TRUE": 11, "FALSE": 12}
+
+    if not tokens:  # Check if tokens list is empty
+        return torch.tensor([]), 13  # Return an empty tensor and vocab size
 
     # Encode each token as an integer index
     sequence_indices = [
-        token if token not in ["TRUE, FALSE"] else boolean_to_index[token]
+        int(token) if token.isdigit() else boolean_to_index[token]
         for token in tokens
     ]
 
@@ -36,8 +38,6 @@ def initialize_model(vocab_size, embedding_dim=8, num_actions=16):
     return embedding_layer, lstm_layer
 
 # Function to process the input sequence through embeddings and LSTM
-
-
 def process_sequence(input_string, embedding_layer, lstm_layer):
     """Processes the input sequence string through embedding and LSTM layers."""
     # Parse and encode the sequence
