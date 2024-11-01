@@ -38,7 +38,6 @@ class GFNOracle:
 
     def select(self, domain, idx):
         # Get hidden state
-        print("초이스: ", self.choice_sequence)
         sequence_embeddings = self.embedding_layer(
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
@@ -81,12 +80,3 @@ class GFNLearner:
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
         sampled_index = torch.multinomial(probs, 1).item()
         return self.domain[sampled_index], torch.log(probs[0][sampled_index])
-
-
-oracle = GFNOracle(
-    8, 16, [(range(10), 0), ([True, False], 1), ([True, False], 2)])
-
-print(oracle.select(range(10), 0))
-print(oracle.select([True, False], 1))
-print(oracle.select([True, False], 2))
-print(oracle.choice_sequence)
