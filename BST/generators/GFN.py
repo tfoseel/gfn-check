@@ -37,28 +37,34 @@ def initialize_model(vocab_size, embedding_dim=8, num_actions=16):
                          hidden_size=num_actions, batch_first=True)
     return embedding_layer, lstm_layer
 
-# Function to process the input sequence through embeddings and LSTM
+
 def process_sequence(input_string, embedding_layer, lstm_layer):
     """Processes the input sequence string through embedding and LSTM layers."""
     # Parse and encode the sequence
     tokens = parse_sequence(input_string)
     sequence_indices, vocab_size = encode_tokens(tokens)
 
+    # Check if the sequence is empty
+    if len(sequence_indices) == 0:
+        # Return a uniform distribution for the output if the sequence is empty
+        output_dim = lstm_layer.hidden_size  # Adjust to match LSTM's output size
+        output = torch.full((output_dim,), 1 / output_dim)  # Uniform softmax-like output
+        return output
+
     # Pass through embedding layer
-    embedded_sequence = embedding_layer(
-        sequence_indices.unsqueeze(0))  # Add batch dim
+    sequence_indices = sequence_indices.long()  # Ensure indices are Long type
+    embedded_sequence = embedding_layer(sequence_indices.unsqueeze(0))  # Add batch dim
 
     # Pass through LSTM layer
-    output, (hidden, cell) = lstm_layer(embedded_sequence)
+    output, (_, _) = lstm_layer(embedded_sequence)
 
-    # get the last output
+    # Get the last output
     output = output.squeeze(0)[-1]
 
-    # apply softmax to get the action values
+    # Apply softmax to get the action values
     output = F.softmax(output, dim=0)
 
-    return output, hidden, cell
-
+    return output
 
 # Example usage
 input_string = "2->TRUE->8->FALSE->3->TRUE"
