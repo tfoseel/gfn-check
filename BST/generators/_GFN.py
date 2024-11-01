@@ -29,9 +29,9 @@ class GFNOracle:
 
         # Optimizer for embedding, logZ, and logPb
         self.logZ = nn.Parameter(torch.tensor(0.0))
-        self.logPf = nn.Parameter(torch.tensor(0.0))
+        self.logPf = torch.tensor(0.0)
         self.optimizer = torch.optim.Adam(
-            list(self.embedding_layer.parameters()) + [self.logZ, self.logPf], lr=0.001)
+            list(self.embedding_layer.parameters()) + [self.logZ], lr=0.001)
 
     def encode_choice_sequence(self):
         return [0] + list(map(lambda x: self.vocab[x[0]], self.choice_sequence))
@@ -53,12 +53,16 @@ class GFNOracle:
     def reward(self, reward):
         loss = (self.logPf + self.logZ - reward) ** 2
         self.optimizer.zero_grad()
+        for learner in self.learners.values():
+            learner.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         for learner in self.learners.values():
-            learner.reward(loss)
+            learner.optimizer.step()
+        
         # Reset choice sequence after updating
         self.choice_sequence = []
+        self.logPf = torch.tensor(0.0)
 
 
 class GFNLearner:
@@ -69,11 +73,13 @@ class GFNLearner:
         self.optimizer = torch.optim.Adam(
             self.action_selector.parameters(), lr=0.001)
 
-    def reward(self, loss):
-        # Perform backpropagation using the calculated loss in GFNOracle
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+    # def reward(self, loss, oracle_optimizer):
+    #     # Perform backpropagation using the calculated loss in GFNOracle
+    #     oracle_optimizer.zero_grad()
+    #     self.optimizer.zero_grad()
+    #     loss.backward()
+    #     oracle_optimizer.step()
+    #     self.optimizer.step()
 
     def policy(self, hidden):
         output = self.action_selector(hidden)
