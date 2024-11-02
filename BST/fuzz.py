@@ -11,7 +11,7 @@ MAX_DEPTH = 4
 
 
 def generate_tree(oracle, depth=0):
-    value = oracle.select(range(0, 10), 1)
+    value = oracle.select(range(0, 11), 1)
     tree = BinarySearchTree(value)
     if depth < MAX_DEPTH and oracle.select([True, False], 2):
         tree.left = generate_tree(oracle, depth + 1)
@@ -62,4 +62,4 @@ if __name__ == '__main__':
     print("====GFN====")
     oracle_g = GFNOracle(
         8, 16, [(range(10), 1), ([True, False], 2), ([True, False], 3)])
-    fuzz(oracle_g)
+    fuzz(oracle_g, unqiue_valid=20, valid=0, invalid=-1)
