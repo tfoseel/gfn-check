@@ -30,8 +30,12 @@ class GFNOracle:
         # Optimizer for embedding, logZ, and logPb
         self.logZ = nn.Parameter(torch.tensor(0.0))
         self.logPf = torch.tensor(0.0)
+        # self.optimizer = torch.optim.Adam(
+        #     list(self.embedding_layer.parameters()) + [self.logZ], lr=0.001)
         self.optimizer = torch.optim.Adam(
-            list(self.embedding_layer.parameters()) + [self.logZ], lr=0.001)
+            list(self.embedding_layer.parameters()) + 
+            list(self.lstm_pf.parameters()) + 
+            [self.logZ], lr=0.00001)
 
     def encode_choice_sequence(self):
         return [0] + list(map(lambda x: self.vocab[x[0]], self.choice_sequence))

@@ -11,7 +11,7 @@ MAX_DEPTH = 4
 
 
 def generate_tree(oracle, depth=0):
-    value = oracle.select(range(0, 11), 1)
+    value = oracle.select(range(0, 10), 1)
     tree = BinarySearchTree(value)
     if depth < MAX_DEPTH and oracle.select([True, False], 2):
         tree.left = generate_tree(oracle, depth + 1)
