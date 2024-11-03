@@ -1,160 +1,92 @@
+import random
+import numpy as np
+from collections import defaultdict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import random
-import math
-
-
-def parse_sequence(input_string):
-    if not input_string:  # Check if the input string is empty
-        return []  # Return an empty list of tokens
-    tokens = input_string.split("->")
-    return tokens
-
-
-def encode_tokens(tokens):
-    """Assigns unique integer indices to each token and encodes the sequence."""
-    boolean_to_index = {"TRUE": 11, "FALSE": 12}
-
-    if not tokens:  # Check if tokens list is empty
-        return torch.tensor([]), 13  # Return an empty tensor and vocab size
-
-    # Encode each token as an integer index
-    sequence_indices = [
-        int(token) if token.isdigit() else boolean_to_index[token]
-        for token in tokens
-    ]
-
-    return torch.tensor(sequence_indices), 13  # (sequence tensor, vocab size)
-
-
-# Function to initialize the embedding and LSTM layers
-def initialize_model(vocab_size, embedding_dim=8, num_actions=16):
-    """Initializes the embedding layer and LSTM model."""
-    embedding_layer = nn.Embedding(
-        num_embeddings=vocab_size, embedding_dim=embedding_dim)
-    lstm_layer = nn.LSTM(input_size=embedding_dim,
-                         hidden_size=num_actions, batch_first=True)
-    return embedding_layer, lstm_layer
-
-
-def process_sequence(input_string, embedding_layer, lstm_layer):
-    """Processes the input sequence string through embedding and LSTM layers."""
-    # Parse and encode the sequence
-    tokens = parse_sequence(input_string)
-    sequence_indices, vocab_size = encode_tokens(tokens)
-
-    # Check if the sequence is empty
-    if len(sequence_indices) == 0:
-        # Return a uniform distribution for the output if the sequence is empty
-        output_dim = lstm_layer.hidden_size  # Adjust to match LSTM's output size
-        # Uniform softmax-like output
-        output = torch.full((output_dim,), 1 / output_dim)
-        return output
-
-    # Pass through embedding layer
-    sequence_indices = sequence_indices.long()  # Ensure indices are Long type
-    embedded_sequence = embedding_layer(
-        sequence_indices.unsqueeze(0))  # Add batch dim
-
-    # Pass through LSTM layer
-    output, (_, _) = lstm_layer(embedded_sequence)
-
-    # Get the last output
-    output = output.squeeze(0)[-1]
-
-    # Apply softmax to get the action values
-    output = F.softmax(output, dim=0)
-
-    return output
-
-
-# Example usage
-input_string = ""
-tokens = parse_sequence(input_string)
-sequence_tensor, vocab_size = encode_tokens(tokens)
-
-# Initialize model components
-embedding_dim = 8  # Dimension of each embedding vector
-hidden_size = 16  # Hidden size of LSTM
-embedding_layer, lstm_layer = initialize_model(
-    vocab_size, embedding_dim, hidden_size)
-
-# Process the sequence
-output = process_sequence(input_string, embedding_layer, lstm_layer)
-
-print("LSTM Output Tensor:")
-print(output.shape)
-print(output.sum())
 
 
 class GFNOracle:
-    def __init__(self, abstract_state_fn, epsilon=0.25, gamma=1.0, initial_val=0):
-        self.abstract_state_fn = abstract_state_fn
+    def __init__(self, embedding_dim, hidden_dim, domains):
         self.learners = {}
         self.choice_sequence = []
-        self.epsilon = epsilon
-        self.gamma = gamma
-        self.initial_val = initial_val
-        self.logZ = torch.nn.Parameter(torch.tensor(0.0), requires_grad=True)
-        self.lr_logz = 0.01
-        self.optimizer_logZ = torch.optim.Adam(
-            [
-                {'params': [self.logZ], 'lr': self.lr_logz},
-            ]
-        )
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.vocab = dict()
+        # 1 for embedding for empty sequence, and the other is total vocabulary size
+        vocab_idx = 1
+        for domain, idx in domains:
+            domain = list(domain)
+            self.learners[idx] = GFNLearner(hidden_dim, domain)
+            for x in domain:
+                self.vocab[x] = vocab_idx
+                vocab_idx += 1
+
+        num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
+        self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
+        self.lstm_pf = nn.LSTM(input_size=embedding_dim,
+                               hidden_size=self.hidden_dim, batch_first=True)
+
+        # Optimizer for embedding, logZ, and logPb
+        self.logZ = nn.Parameter(torch.tensor(0.0))
+        self.logPf = torch.tensor(0.0)
+        # self.optimizer = torch.optim.Adam(
+        #     list(self.embedding_layer.parameters()) + [self.logZ], lr=0.001)
+        self.optimizer = torch.optim.Adam(
+            list(self.embedding_layer.parameters()) +
+            list(self.lstm_pf.parameters()) +
+            [self.logZ], lr=0.00001)
+
+    def encode_choice_sequence(self):
+        return [0] + list(map(lambda x: self.vocab[x[0]], self.choice_sequence))
 
     def select(self, domain, idx):
-        abstract_state = self.abstract_state_fn(self.choice_sequence)
-        if not idx in self.learners:
-            self.learners[idx] = GFNLearner(
-                self.epsilon, self.gamma, self.initial_val, embedding_dim=8, hidden_size=len(domain[idx]))
-        choice, log_pf = self.learners[idx].policy(domain, abstract_state)
-        self.choice_sequence.append(choice)
-        return choice, log_pf
+        # Get hidden state
+        sequence_embeddings = self.embedding_layer(
+            torch.tensor(self.encode_choice_sequence(),
+                         dtype=torch.long).unsqueeze(0)
+        )
+        _, (hidden, _) = self.lstm_pf(sequence_embeddings)
+        hidden = hidden[-1]  # shape: (1, hidden_dim)
+        # Select action based on the hidden state
+        choice, log_prob = self.learners[idx].policy(hidden)
+        self.choice_sequence.append((choice, log_prob))
+        self.logPf = self.logPf + log_prob
+        return choice
 
-    # updates upon full episodes
     def reward(self, reward):
+        loss = (self.logPf + self.logZ - reward) ** 2
+        self.optimizer.zero_grad()
         for learner in self.learners.values():
-            learner.reward(reward)
+            learner.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        for learner in self.learners.values():
+            learner.optimizer.step()
+
+        # Reset choice sequence after updating
         self.choice_sequence = []
+        self.logPf = torch.tensor(0.0)
 
 
 class GFNLearner:
-    def __init__(self,  epsilon=0.25, gamma=1.0, learning_rate=0.01, initial_val=0, embedding_dim=8, hidden_size=16):
-        self.embedding_layer_pf = nn.Embedding(
-            num_embeddings=1, embedding_dim=embedding_dim)
-        self.embedding_layer_pb = nn.Embedding(
-            num_embeddings=1, embedding_dim=embedding_dim)
-        self.lstm_layer_pf = nn.LSTM(
-            input_size=embedding_dim, hidden_size=hidden_size, batch_first=True)
-        self.lstm_layer_pb = nn.LSTM(
-            input_size=embedding_dim, hidden_size=hidden_size, batch_first=True)
-
-        self.lr = learning_rate
-        self.epsilon = epsilon
-        self.gamma = gamma
-        self.choice_state_sequence = []
-        self.initial_val = initial_val
+    def __init__(self, hidden_dim, domain):
+        self.domain = domain
+        self.action_selector = nn.Linear(
+            in_features=hidden_dim, out_features=len(domain))
         self.optimizer = torch.optim.Adam(
-            [
-                {'params': self.embedding_layer_pf.parameters(), 'lr': self.lr},
-                {'params': self.lstm_layer_pf.parameters(), 'lr': self.lr},
-            ]
-        )
+            self.action_selector.parameters(), lr=0.001)
 
-    def policy(self, domain, state):
-        domain = list(domain)
-        # Epsilon-greedy strategy
-        if np.random.binomial(1, self.epsilon):
-            choice = random.choice(domain)
-        else:
-            self.action_values = process_sequence(
-                state, self.embedding_layer_pf, self.lstm_layer_pf)
-            action_idx = random.choice(np.flatnonzero(
-                self.action_values == self.action_values.max()))  # break ties randomly
-            choice = domain[action_idx]
-            log_pf = math.log(self.action_values[action_idx])
-        self.choice_state_sequence.append([state, choice, 0])
-        return choice, log_pf
+    # def reward(self, loss, oracle_optimizer):
+    #     # Perform backpropagation using the calculated loss in GFNOracle
+    #     oracle_optimizer.zero_grad()
+    #     self.optimizer.zero_grad()
+    #     loss.backward()
+    #     oracle_optimizer.step()
+    #     self.optimizer.step()
+
+    def policy(self, hidden):
+        output = self.action_selector(hidden)
+        probs = F.softmax(output, dim=-1)  # Convert to probabilities
+        sampled_index = torch.multinomial(probs, 1).item()
+        return self.domain[sampled_index], torch.log(probs[0][sampled_index])
