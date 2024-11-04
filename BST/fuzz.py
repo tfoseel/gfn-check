@@ -5,7 +5,7 @@ from bst import BinarySearchTree
 from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
 from generators.RL import RLOracle
 from generators.Random import RandomOracle
-from generators._GFN import GFNOracle
+from generators.GFN import GFNOracle
 
 MAX_DEPTH = 4
 
@@ -24,7 +24,7 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
-    trials = 100000
+    trials = 10000
     for i in range(trials):
         print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), (len(valid_set) * 100 / valids) if valids != 0 else 0), end='\r')
@@ -46,9 +46,9 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
 
 
 if __name__ == '__main__':
-    # print("====Random====")
-    # oracle_r = RandomOracle()
-    # fuzz(oracle_r)
+    print("====Random====")
+    oracle_r = RandomOracle()
+    fuzz(oracle_r)
     # print("====RL: Sequence====")
     # oracle_s = RLOracle(sequence_ngram_fn(4), epsilon=0.25)
     # fuzz(oracle_s, unqiue_valid=20, valid=0, invalid=-1)
@@ -62,4 +62,4 @@ if __name__ == '__main__':
     print("====GFN====")
     oracle_g = GFNOracle(
         8, 16, [(range(10), 1), ([True, False], 2), ([True, False], 3)])
-    fuzz(oracle_g, unqiue_valid=20, valid=0, invalid=-1)
+    fuzz(oracle_g, unqiue_valid=20, valid=20, invalid=1)

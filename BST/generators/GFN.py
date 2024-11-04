@@ -1,4 +1,5 @@
 import random
+import math
 import numpy as np
 from collections import defaultdict
 import torch
@@ -55,7 +56,7 @@ class GFNOracle:
         return choice
 
     def reward(self, reward):
-        loss = (self.logPf + self.logZ - reward) ** 2
+        loss = (self.logPf + self.logZ - math.log(reward)) ** 2
         self.optimizer.zero_grad()
         for learner in self.learners.values():
             learner.optimizer.zero_grad()
