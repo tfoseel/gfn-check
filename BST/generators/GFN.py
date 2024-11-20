@@ -25,6 +25,8 @@ class GFNOracle:
             for x in domain:
                 self.vocab[x] = vocab_idx
                 vocab_idx += 1
+        print(domains)
+        print(self.vocab)
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
         self.logZ = nn.Parameter(torch.tensor(5.0))
