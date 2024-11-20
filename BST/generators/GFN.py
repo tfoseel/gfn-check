@@ -38,13 +38,14 @@ class GFNOracle:
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
         self.optimizer = torch.optim.Adam(
-            itertools.chain(
-                self.embedding_layer.parameters(),
-                self.lstm_pf.parameters(),
-                [self.logZ],
-                *(learner.action_selector.parameters() for learner in self.learners.values())
-            ),
-            lr=1,
+            [
+                {'params': self.embedding_layer.parameters()},
+                {'params': self.lstm_pf.parameters()},
+                {'params': itertools.chain(
+                    *(learner.action_selector.parameters() for learner in self.learners.values()))},
+                {'params': [self.logZ], 'lr': 1},
+            ],
+            lr=0.01,
         )
 
     def encode_choice_sequence(self):
@@ -67,12 +68,13 @@ class GFNOracle:
     def reward(self, reward):
         loss = (self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward]))) ** 2
-        losses.append(loss.item())
-        if len(losses) > 100:
-            print(f"Running mean 100: {sum(losses[-100:]) / 100}")
+        # losses.append(loss.item())
+        # if len(losses) > 100:
+        #     print(
+        #         f"Running mean 100: {sum(losses[-100:]) / 100}, choices: {list(map(lambda x: x[0], self.choice_sequence))}")
         self.loss = self.loss + loss
         self.num_generation += 1
-        if self.num_generation > 0 and self.num_generation % 64 == 0:
+        if self.num_generation > 0 and self.num_generation % 1 == 0:
             self.optimizer.zero_grad()
             self.loss.backward()
             self.optimizer.step()
