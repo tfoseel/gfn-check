@@ -7,8 +7,8 @@ from generators.RL import RLOracle
 from generators.Random import RandomOracle
 from generators.GFN import GFNOracle
 
-MAX_DEPTH = 4
-VALUES = range(0, 11)
+MAX_DEPTH = 2
+VALUES = range(0, 4)
 LEFT = [True, False]
 RIGHT = [True, False]
 
@@ -49,9 +49,9 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
 
 
 if __name__ == '__main__':
-    print("====Random====")
-    oracle_r = RandomOracle()
-    fuzz(oracle_r)
+    # print("====Random====")
+    # oracle_r = RandomOracle()
+    # fuzz(oracle_r)
     # print("====RL: Sequence====")
     # oracle_s = RLOracle(sequence_ngram_fn(4), epsilon=0.25)
     # fuzz(oracle_s, unqiue_valid=20, valid=0, invalid=-1)
@@ -64,5 +64,5 @@ if __name__ == '__main__':
     # fuzz(oracle_lrt, unqiue_valid=20, valid=0, invalid=-1)
     print("====GFN====")
     oracle_g = GFNOracle(
-        8, 16, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+        256, 256, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
     fuzz(oracle_g, unqiue_valid=20, valid=1, invalid=0.0001)
