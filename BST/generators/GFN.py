@@ -11,12 +11,16 @@ losses = []
 
 
 class GFNOracle:
-    def __init__(self, embedding_dim, hidden_dim, domains):
+    def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.vocab = dict()
+        self.transformer = transformer
+        if transformer:
+            self.hidden_dim = embedding_dim
+            hidden_dim = embedding_dim
         # 1 for embedding for empty sequence, and the other is total vocabulary size
         vocab_idx = 1
         for domain, idx in domains:
@@ -31,6 +35,10 @@ class GFNOracle:
         self.logZ_lower = 0.0
         self.lstm_pf = nn.LSTM(input_size=embedding_dim,
                                hidden_size=self.hidden_dim, batch_first=True)
+        
+        self.transformer_pf = nn.TransformerEncoderLayer(d_model=embedding_dim, nhead=1)
+        
+
 
         self.logPf = torch.tensor(0.0)
 
@@ -38,15 +46,26 @@ class GFNOracle:
 
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
-        self.optimizer_policy = torch.optim.Adam(
-            [
-                {'params': self.embedding_layer.parameters()},
-                {'params': self.lstm_pf.parameters()},
-                {'params': itertools.chain(
-                    *(learner.action_selector.parameters() for learner in self.learners.values()))},
-            ],
-            lr=0.001,
-        )
+        if transformer:
+            self.optimizer_policy = torch.optim.Adam(
+                [
+                    {'params': self.embedding_layer.parameters()},
+                    {'params': self.transformer_pf.parameters()},
+                    {'params': itertools.chain(
+                        *(learner.action_selector.parameters() for learner in self.learners.values()))},
+                ],
+                lr=0.001,
+            )
+        else:
+            self.optimizer_policy = torch.optim.Adam(
+                [
+                    {'params': self.embedding_layer.parameters()},
+                    {'params': self.lstm_pf.parameters()},
+                    {'params': itertools.chain(
+                        *(learner.action_selector.parameters() for learner in self.learners.values()))},
+                ],
+                lr=0.001,
+            )
         self.optimizer_logZ = torch.optim.Adam(
             [{'params': [self.logZ], 'lr': 0.01}],
         )
@@ -63,9 +82,16 @@ class GFNOracle:
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
         )
-        _, (hidden, _) = self.lstm_pf(sequence_embeddings)
-
-        hidden = hidden[-1]  # shape: (1, hidden_dim)
+        if self.transformer:
+            #import pdb; pdb.set_trace()
+            hidden = self.transformer_pf(sequence_embeddings)
+            hidden = hidden[:, 0, :]    
+        else:
+            print(sequence_embeddings.shape)
+            _, (hidden, _) = self.lstm_pf(sequence_embeddings)
+            print(hidden.shape)
+            hidden = hidden[-1]  # shape: (1, hidden_dim)
+            print(hidden.shape)
         # Select action based on the hidden state
         choice, log_prob = self.learners[idx].policy(hidden)
         self.choice_sequence.append((choice, log_prob))

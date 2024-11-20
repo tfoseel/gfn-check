@@ -7,18 +7,18 @@ from generators.RL import RLOracle
 from generators.Random import RandomOracle
 from generators.GFN import GFNOracle
 
-MAX_DEPTH = 2
-VALUES = range(0, 4)
-LEFT = [True, False]
-RIGHT = [True, False]
+MAX_DEPTH = 4
+VALUES = range(0, 10)
+LEFT = ["TrueL", "FalseL"]
+RIGHT = ["TrueR", "FalseR"]
 
 
 def generate_tree(oracle, depth=0):
     value = oracle.select(VALUES, 1)
     tree = BinarySearchTree(value)
-    if depth < MAX_DEPTH and oracle.select(LEFT, 2):
+    if depth < MAX_DEPTH and oracle.select(LEFT, 2) == "TrueL":
         tree.left = generate_tree(oracle, depth + 1)
-    if depth < MAX_DEPTH and oracle.select(RIGHT, 3):
+    if depth < MAX_DEPTH and oracle.select(RIGHT, 3) == "TrueR":
         tree.right = generate_tree(oracle, depth + 1)
     return tree
 
