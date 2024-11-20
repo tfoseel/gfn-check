@@ -25,29 +25,34 @@ class GFNOracle:
             for x in domain:
                 self.vocab[x] = vocab_idx
                 vocab_idx += 1
-        print("보캅: ", self.vocab)
-
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
+        self.logZ = nn.Parameter(torch.tensor(5.0))
+        self.logZ_lower = 0.0
         self.lstm_pf = nn.LSTM(input_size=embedding_dim,
                                hidden_size=self.hidden_dim, batch_first=True)
 
-        # Optimizer for embedding, logZ, and logPb
-        self.logZ = nn.Parameter(torch.tensor(0.0))
         self.logPf = torch.tensor(0.0)
+
+        self.beta = 1
 
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
-        self.optimizer = torch.optim.Adam(
+        self.optimizer_policy = torch.optim.Adam(
             [
                 {'params': self.embedding_layer.parameters()},
                 {'params': self.lstm_pf.parameters()},
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
-                {'params': [self.logZ], 'lr': 0.1},
             ],
-            lr=0.01,
+            lr=0.001,
         )
+        self.optimizer_logZ = torch.optim.Adam(
+            [{'params': [self.logZ], 'lr': 0.01}],
+        )
+
+    def clamp_logZ(self):
+        self.logZ.data = torch.clamp(self.logZ, min=self.logZ_lower)
 
     def encode_choice_sequence(self):
         return [0] + list(map(lambda x: self.vocab[x[0]], self.choice_sequence))
@@ -59,6 +64,7 @@ class GFNOracle:
                          dtype=torch.long).unsqueeze(0)
         )
         _, (hidden, _) = self.lstm_pf(sequence_embeddings)
+
         hidden = hidden[-1]  # shape: (1, hidden_dim)
         # Select action based on the hidden state
         choice, log_prob = self.learners[idx].policy(hidden)
@@ -68,18 +74,24 @@ class GFNOracle:
 
     def reward(self, reward):
         loss = (self.logPf + self.logZ -
-                torch.log(torch.Tensor([reward]))) ** 2
-        # losses.append(loss.item())
+                torch.log(torch.Tensor([reward])) * self.beta) ** 2
+        losses.append(loss.item())
         # if len(losses) > 100:
         #     print(
         #         f"Running mean 100: {sum(losses[-100:]) / 100}, choices: {list(map(lambda x: x[0], self.choice_sequence))}")
+       # print("Generated tree: ", list(map(lambda x: x[0], self.choice_sequence)))
         self.loss = self.loss + loss
         self.num_generation += 1
-        if self.num_generation > 0 and self.num_generation % 1 == 0:
-            self.optimizer.zero_grad()
+        if self.num_generation > 0 and self.num_generation % 10 == 0:
+            self.optimizer_policy.zero_grad()
+            self.optimizer_logZ.zero_grad()
             self.loss.backward()
-            self.optimizer.step()
+            print("Running mean 100: ", sum(losses[-100:]) / 100)
+            self.optimizer_policy.step()
+            self.optimizer_logZ.step()
             self.loss = torch.tensor(0.0)
+            self.clamp_logZ()
+
         # Reset choice sequence after updating
         self.choice_sequence = []
         self.logPf = torch.tensor(0.0)
@@ -94,5 +106,9 @@ class GFNLearner:
     def policy(self, hidden):
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
-        sampled_index = torch.multinomial(probs, 1).item()
+        # epsilon greedy
+        if np.random.binomial(1, 0.25):
+            sampled_index = random.choice(range(len(self.domain)))
+        else:
+            sampled_index = torch.multinomial(probs, 1).item()
         return self.domain[sampled_index], torch.log(probs[0][sampled_index])
