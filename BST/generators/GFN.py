@@ -22,10 +22,10 @@ class GFNOracle:
         for domain, idx in domains:
             domain = list(domain)
             self.learners[idx] = GFNLearner(hidden_dim, domain)
+            self.vocab[idx] = dict()
             for x in domain:
-                self.vocab[x] = vocab_idx
+                self.vocab[idx][x] = vocab_idx
                 vocab_idx += 1
-        print(domains)
         print(self.vocab)
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
@@ -33,11 +33,8 @@ class GFNOracle:
         self.logZ_lower = 0.0
         self.lstm_pf = nn.LSTM(input_size=embedding_dim,
                                hidden_size=self.hidden_dim, batch_first=True)
-
         self.logPf = torch.tensor(0.0)
-
         self.beta = 1
-
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
         self.optimizer_policy = torch.optim.Adam(
@@ -46,18 +43,17 @@ class GFNOracle:
                 {'params': self.lstm_pf.parameters()},
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
-            ],
-            lr=0.001,
+            ], lr=0.01,
         )
         self.optimizer_logZ = torch.optim.Adam(
-            [{'params': [self.logZ], 'lr': 0.01}],
+            [{'params': [self.logZ], 'lr': 0.1}],
         )
 
     def clamp_logZ(self):
         self.logZ.data = torch.clamp(self.logZ, min=self.logZ_lower)
 
     def encode_choice_sequence(self):
-        return [0] + list(map(lambda x: self.vocab[x[0]], self.choice_sequence))
+        return [0] + list(map(lambda x: self.vocab[x[0]][x[1]], self.choice_sequence))
 
     def select(self, domain, idx):
         # Get hidden state
@@ -70,7 +66,7 @@ class GFNOracle:
         hidden = hidden[-1]  # shape: (1, hidden_dim)
         # Select action based on the hidden state
         choice, log_prob = self.learners[idx].policy(hidden)
-        self.choice_sequence.append((choice, log_prob))
+        self.choice_sequence.append((idx, choice, log_prob))
         self.logPf = self.logPf + log_prob
         return choice
 

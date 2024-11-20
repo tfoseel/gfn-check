@@ -9,8 +9,8 @@ from generators.GFN import GFNOracle
 
 MAX_DEPTH = 4
 VALUES = range(0, 10)
-LEFT = ["TrueL", "FalseL"]
-RIGHT = ["TrueR", "FalseR"]
+LEFT = [True, False]
+RIGHT = [True, False]
 
 
 def generate_tree(oracle, depth=0):
