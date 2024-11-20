@@ -25,6 +25,7 @@ class GFNOracle:
             for x in domain:
                 self.vocab[x] = vocab_idx
                 vocab_idx += 1
+        print("보캅: ", self.vocab)
 
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
@@ -43,7 +44,7 @@ class GFNOracle:
                 {'params': self.lstm_pf.parameters()},
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
-                {'params': [self.logZ], 'lr': 1},
+                {'params': [self.logZ], 'lr': 0.1},
             ],
             lr=0.01,
         )

@@ -65,4 +65,4 @@ if __name__ == '__main__':
     print("====GFN====")
     oracle_g = GFNOracle(
         8, 16, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    fuzz(oracle_g, unqiue_valid=20, valid=1, invalid=0.0001)
+    fuzz(oracle_g, unqiue_valid=1, valid=1, invalid=0.0001)
