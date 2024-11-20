@@ -65,7 +65,7 @@ class GFNOracle:
         return choice
 
     def reward(self, reward):
-        loss = (self.logPf + self.logZ -
+        loss = -(self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward]))) ** 2
         losses.append(loss.item())
         if len(losses) > 100:
