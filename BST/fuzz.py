@@ -8,19 +8,22 @@ from generators.Random import RandomOracle
 from generators.GFN import GFNOracle
 
 MAX_DEPTH = 4
+VALUES = range(0, 11)
+LEFT = [True, False]
+RIGHT = [True, False]
 
 
 def generate_tree(oracle, depth=0):
-    value = oracle.select(range(0, 11), 1)
+    value = oracle.select(VALUES, 1)
     tree = BinarySearchTree(value)
-    if depth < MAX_DEPTH and oracle.select([True, False], 2):
+    if depth < MAX_DEPTH and oracle.select(LEFT, 2):
         tree.left = generate_tree(oracle, depth + 1)
-    if depth < MAX_DEPTH and oracle.select([True, False], 3):
+    if depth < MAX_DEPTH and oracle.select(RIGHT, 3):
         tree.right = generate_tree(oracle, depth + 1)
     return tree
 
 
-def fuzz(oracle, unqiue_valid=1, valid=1, invalid=0):
+def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
@@ -61,5 +64,5 @@ if __name__ == '__main__':
     # fuzz(oracle_lrt, unqiue_valid=20, valid=0, invalid=-1)
     print("====GFN====")
     oracle_g = GFNOracle(
-        8, 16, [(range(10), 1), ([True, False], 2), ([True, False], 3)])
-    fuzz(oracle_g, unqiue_valid=20, valid=20, invalid=1)
+        8, 16, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+    fuzz(oracle_g, unqiue_valid=5, valid=5, invalid=1)
