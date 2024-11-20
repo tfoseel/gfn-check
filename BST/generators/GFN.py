@@ -1,10 +1,13 @@
-import random
-import math
-import numpy as np
-from collections import defaultdict
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn as nn
+import torch
+from collections import defaultdict
+import numpy as np
+import itertools
+import math
+import random
+
+losses = []
 
 
 class GFNOracle:
@@ -30,11 +33,17 @@ class GFNOracle:
 
         # Optimizer for embedding, logZ, and logPb
         self.logZ = nn.Parameter(torch.tensor(0.0))
-        self.logPf = nn.Parameter(torch.tensor(0.0))
+        self.logPf = torch.tensor(0.0, requires_grad=True)
+
         self.optimizer = torch.optim.Adam(
-            list(self.embedding_layer.parameters()) +
-            list(self.lstm_pf.parameters()) +
-            [self.logZ, self.logPf], lr=0.001)
+            itertools.chain(
+                self.embedding_layer.parameters(),
+                self.lstm_pf.parameters(),
+                [self.logZ],
+                *(learner.action_selector.parameters() for learner in self.learners.values())
+            ),
+            lr=0.0001
+        )
 
     def encode_choice_sequence(self):
         return [0] + list(map(lambda x: self.vocab[x[0]], self.choice_sequence))
@@ -56,18 +65,16 @@ class GFNOracle:
     def reward(self, reward):
         loss = (self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward]))) ** 2
-        print(loss)
+        losses.append(loss.item())
+        if len(losses) > 100:
+            print(f"Running mean 100: {sum(losses[-100:]) / 100}")
         self.optimizer.zero_grad()
-        for learner in self.learners.values():
-            learner.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        for learner in self.learners.values():
-            learner.optimizer.step()
 
         # Reset choice sequence after updating
         self.choice_sequence = []
-        self.logPf = nn.Parameter(torch.tensor(0.0))
+        self.logPf = torch.tensor(0.0, requires_grad=True)
 
 
 class GFNLearner:
@@ -75,16 +82,6 @@ class GFNLearner:
         self.domain = domain
         self.action_selector = nn.Linear(
             in_features=hidden_dim, out_features=len(domain))
-        self.optimizer = torch.optim.Adam(
-            self.action_selector.parameters(), lr=0.001)
-
-    # def reward(self, loss, oracle_optimizer):
-    #     # Perform backpropagation using the calculated loss in GFNOracle
-    #     oracle_optimizer.zero_grad()
-    #     self.optimizer.zero_grad()
-    #     loss.backward()
-    #     oracle_optimizer.step()
-    #     self.optimizer.step()
 
     def policy(self, hidden):
         output = self.action_selector(hidden)

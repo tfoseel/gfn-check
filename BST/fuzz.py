@@ -20,7 +20,7 @@ def generate_tree(oracle, depth=0):
     return tree
 
 
-def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
+def fuzz(oracle, unqiue_valid=1, valid=1, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
