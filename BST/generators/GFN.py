@@ -33,7 +33,7 @@ class GFNOracle:
 
         # Optimizer for embedding, logZ, and logPb
         self.logZ = nn.Parameter(torch.tensor(0.0))
-        self.logPf = torch.tensor(0.0, requires_grad=True)
+        self.logPf = torch.tensor(0.0)
 
         self.optimizer = torch.optim.Adam(
             itertools.chain(
@@ -63,7 +63,7 @@ class GFNOracle:
         return choice
 
     def reward(self, reward):
-        loss = (self.logPf + self.logZ -
+        loss = -(self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward]))) ** 2
         losses.append(loss.item())
         if len(losses) > 100:
@@ -74,7 +74,7 @@ class GFNOracle:
 
         # Reset choice sequence after updating
         self.choice_sequence = []
-        self.logPf = torch.tensor(0.0, requires_grad=True)
+        self.logPf = torch.tensor(0.0)
 
 
 class GFNLearner:
