@@ -16,9 +16,9 @@ RIGHT = [True, False]
 def generate_tree(oracle, depth=0):
     value = oracle.select(VALUES, 1)
     tree = BinarySearchTree(value)
-    if depth < MAX_DEPTH and oracle.select(LEFT, 2) == "TrueL":
+    if depth < MAX_DEPTH and oracle.select(LEFT, 2) == True:
         tree.left = generate_tree(oracle, depth + 1)
-    if depth < MAX_DEPTH and oracle.select(RIGHT, 3) == "TrueR":
+    if depth < MAX_DEPTH and oracle.select(RIGHT, 3) == True:
         tree.right = generate_tree(oracle, depth + 1)
     return tree
 
@@ -64,5 +64,5 @@ if __name__ == '__main__':
     # fuzz(oracle_lrt, unqiue_valid=20, valid=0, invalid=-1)
     print("====GFN====")
     oracle_g = GFNOracle(
-        8, 16, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)], transformer=False)
     fuzz(oracle_g, unqiue_valid=20, valid=1, invalid=0.0001)
