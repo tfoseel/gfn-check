@@ -10,8 +10,9 @@ import random
 losses = []
 
 
-class GFNOracle:
+class GFNOracle(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
+        super(GFNOracle, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
@@ -69,7 +70,8 @@ class GFNOracle:
         )
 
     def clamp_logZ(self):
-        self.logZ.data = torch.clamp(self.logZ, min=self.logZ_lower)
+        with torch.no_grad():
+            self.logZ.copy_(torch.clamp(self.logZ, min=self.logZ_lower))
 
     def encode_choice_sequence(self):
         return [0] + list(map(lambda x: self.vocab[x[0]][x[1]], self.choice_sequence))
@@ -80,9 +82,7 @@ class GFNOracle:
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
         )
-       # print(self.encode_choice_sequence())
         if self.transformer:
-
             hidden = self.transformer_pf(sequence_embeddings)
             hidden = hidden[:, 0, :]
         else:
@@ -98,17 +98,16 @@ class GFNOracle:
         loss = (self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward])) * self.beta) ** 2
         losses.append(loss.item())
-        # if len(losses) > 100:
-        #     print(
-        #         f"Running mean 100: {sum(losses[-100:]) / 100}, choices: {list(map(lambda x: x[0], self.choice_sequence))}")
-       # print("Generated tree: ", list(map(lambda x: x[0], self.choice_sequence)))
         self.loss = self.loss + loss
         self.num_generation += 1
         if self.num_generation > 0 and self.num_generation % 10 == 0:
             self.optimizer_policy.zero_grad()
             self.optimizer_logZ.zero_grad()
             self.loss.backward()
-            print("Running mean 100: ", sum(losses[-100:]) / 100)
+            torch.nn.utils.clip_grad_norm_(self.parameters(), 10)
+            print(list(map(lambda x: x[1], self.choice_sequence)))
+            print("Running mean 100: ", sum(
+                losses[-100:]) / 100, "log Z: ", self.logZ.item())
             self.optimizer_policy.step()
             self.optimizer_logZ.step()
             self.loss = torch.tensor(0.0)
@@ -121,15 +120,19 @@ class GFNOracle:
 
 class GFNLearner:
     def __init__(self, hidden_dim, domain):
+        self.exploration_prob = 1
+        self.min_exploration_prob = 0.2
         self.domain = domain
         self.action_selector = nn.Linear(
             in_features=hidden_dim, out_features=len(domain))
 
     def policy(self, hidden):
+        if self.exploration_prob > self.min_exploration_prob:
+            self.exploration_prob *= 0.9995
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
         # Epsilon greedy
-        if np.random.binomial(1, 0.25):
+        if np.random.binomial(1, self.exploration_prob):
             sampled_index = random.choice(range(len(self.domain)))
         else:
             sampled_index = torch.multinomial(probs, 1).item()
