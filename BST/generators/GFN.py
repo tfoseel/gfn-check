@@ -30,9 +30,9 @@ class GFNOracle:
             for x in domain:
                 self.vocab[idx][x] = vocab_idx
                 vocab_idx += 1
-        print(self.vocab)
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
+        self.beta = 1
         self.logZ = nn.Parameter(torch.tensor(5.0))
         self.logZ_lower = 0.0
         self.lstm_pf = nn.LSTM(input_size=embedding_dim,
@@ -42,7 +42,6 @@ class GFNOracle:
             d_model=embedding_dim, nhead=1)
 
         self.logPf = torch.tensor(0.0)
-        self.beta = 1
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
         if transformer:
@@ -131,7 +130,7 @@ class GFNLearner:
     def policy(self, hidden):
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
-        # epsilon greedy
+        # Epsilon greedy
         if np.random.binomial(1, 0.25):
             sampled_index = random.choice(range(len(self.domain)))
         else:
