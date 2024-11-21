@@ -8,7 +8,7 @@ from generators.Random import RandomOracle
 from generators.GFN import GFNOracle
 
 MAX_DEPTH = 4
-VALUES = range(0, 10)
+VALUES = range(0, 11)
 LEFT = [True, False]
 RIGHT = [True, False]
 
