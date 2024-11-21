@@ -38,11 +38,15 @@ class GFNOracle:
         self.lstm_pf = nn.LSTM(input_size=embedding_dim,
                                hidden_size=self.hidden_dim, batch_first=True)
 
-        self.transformer_pf = nn.TransformerEncoderLayer(
+        transformer_layer = nn.TransformerEncoderLayer(
             d_model=embedding_dim, nhead=1)
+        
+        self.transformer_pf = nn.TransformerEncoder(transformer_layer, num_layers=10)
+        
+
 
         self.logPf = torch.tensor(0.0)
-        self.beta = 1
+        self.beta = 10
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
         if transformer:
@@ -130,7 +134,7 @@ class GFNLearner:
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
         # epsilon greedy
-        if np.random.binomial(1, 0.25):
+        if np.random.binomial(1, 0.5):
             sampled_index = random.choice(range(len(self.domain)))
         else:
             sampled_index = torch.multinomial(probs, 1).item()
