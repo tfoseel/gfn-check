@@ -81,16 +81,14 @@ class GFNOracle:
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
         )
+       # print(self.encode_choice_sequence())
         if self.transformer:
-            # import pdb; pdb.set_trace()
+
             hidden = self.transformer_pf(sequence_embeddings)
             hidden = hidden[:, 0, :]
         else:
-            print(sequence_embeddings.shape)
             _, (hidden, _) = self.lstm_pf(sequence_embeddings)
-            print(hidden.shape)
             hidden = hidden[-1]  # shape: (1, hidden_dim)
-            print(hidden.shape)
         # Select action based on the hidden state
         choice, log_prob = self.learners[idx].policy(hidden)
         self.choice_sequence.append((idx, choice, log_prob))
