@@ -6,6 +6,7 @@ import numpy as np
 import itertools
 import math
 import random
+from tqdm import tqdm
 
 losses = []
 
@@ -35,7 +36,7 @@ class GFNOracle(nn.Module):
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
         self.beta = 1
         self.logZ = nn.Parameter(torch.tensor(5.0))
-        self.logZ_lower = 0.0
+        self.logZ_lower = 10
         self.lstm_pf = nn.LSTM(input_size=embedding_dim,
                                hidden_size=self.hidden_dim, batch_first=True)
 
@@ -43,14 +44,9 @@ class GFNOracle(nn.Module):
             d_model=embedding_dim, nhead=1)
         
         self.transformer_pf = nn.TransformerEncoder(transformer_layer, num_layers=10)
-        
-
 
         self.logPf = torch.tensor(0.0)
-<<<<<<< HEAD
-=======
         self.beta = 10
->>>>>>> 1daae9f0534dc3b83223168036d6abcd163c1b24
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
         if transformer:
@@ -61,7 +57,7 @@ class GFNOracle(nn.Module):
                     {'params': itertools.chain(
                         *(learner.action_selector.parameters() for learner in self.learners.values()))},
                 ],
-                lr=0.001,
+                lr=0.0001,
             )
         else:
             self.optimizer_policy = torch.optim.Adam(
@@ -71,7 +67,7 @@ class GFNOracle(nn.Module):
                     {'params': itertools.chain(
                         *(learner.action_selector.parameters() for learner in self.learners.values()))},
                 ],
-                lr=0.001,
+                lr=0.0001,
             )
         self.optimizer_logZ = torch.optim.Adam(
             [{'params': [self.logZ], 'lr': 0.1}],
@@ -86,10 +82,12 @@ class GFNOracle(nn.Module):
 
     def select(self, domain, idx):
         # Get hidden state
+        # print("Encoding: ", self.encode_choice_sequence())
         sequence_embeddings = self.embedding_layer(
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
         )
+        # print(sequence_embeddings)
         if self.transformer:
             hidden = self.transformer_pf(sequence_embeddings)
             hidden = hidden[:, 0, :]
@@ -97,7 +95,10 @@ class GFNOracle(nn.Module):
             _, (hidden, _) = self.lstm_pf(sequence_embeddings)
             hidden = hidden[-1]  # shape: (1, hidden_dim)
         # Select action based on the hidden state
-        choice, log_prob = self.learners[idx].policy(hidden)
+        choice, log_prob, probs = self.learners[idx].policy(hidden)
+        # if len(self.encode_choice_sequence()) == 2:
+        #     print("Choice: ", choice)
+        #     print(probs)
         self.choice_sequence.append((idx, choice, log_prob))
         self.logPf = self.logPf + log_prob
         return choice
@@ -105,6 +106,7 @@ class GFNOracle(nn.Module):
     def reward(self, reward):
         loss = (self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward])) * self.beta) ** 2
+        tqdm.write(f"Reward: {reward} Loss: {loss.item()} Z: {math.exp(self.logZ.item())}")
         losses.append(loss.item())
         self.loss = self.loss + loss
         self.num_generation += 1
@@ -113,9 +115,9 @@ class GFNOracle(nn.Module):
             self.optimizer_logZ.zero_grad()
             self.loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 10)
-            print(list(map(lambda x: x[1], self.choice_sequence)))
-            print("Running mean 100: ", sum(
-                losses[-100:]) / 100, "log Z: ", self.logZ.item())
+            tqdm.write(str(list(map(lambda x: x[1], self.choice_sequence))))
+            # print("Running mean 100: ", sum(
+            #     losses[-100:]) / 100, "log Z: ", self.logZ.item())
             self.optimizer_policy.step()
             self.optimizer_logZ.step()
             self.loss = torch.tensor(0.0)
@@ -139,14 +141,10 @@ class GFNLearner:
             self.exploration_prob *= 0.9995
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
-<<<<<<< HEAD
-        # Epsilon greedy
-        if np.random.binomial(1, self.exploration_prob):
-=======
         # epsilon greedy
-        if np.random.binomial(1, 0.5):
->>>>>>> 1daae9f0534dc3b83223168036d6abcd163c1b24
-            sampled_index = random.choice(range(len(self.domain)))
-        else:
-            sampled_index = torch.multinomial(probs, 1).item()
-        return self.domain[sampled_index], torch.log(probs[0][sampled_index])
+        # if np.random.binomial(1, 0.5):
+        #     sampled_index = random.choice(range(len(self.domain)))
+        # else:
+        #     sampled_index = torch.multinomial(probs, 1).item()
+        sampled_index = torch.multinomial(probs, 1).item()
+        return self.domain[sampled_index], torch.log(probs[0][sampled_index]), probs
