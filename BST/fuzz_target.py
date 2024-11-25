@@ -6,10 +6,11 @@ from generators.state_abstraction import parent_state_ngram_fn, left_right_paren
 from generators.RL import RLOracle
 from generators.Random import RandomOracle
 
-MAX_DEPTH = 5
+MAX_DEPTH = 2
+VALUES = range(0, 4)
 
 
-def generate_tree(oracle, depth=0, min_value=-float('inf'), max_value=float('inf')):
+def generate_tree(depth=0, min_value=-float('inf'), max_value=float('inf')):
     """
     Generate a Binary Search Tree (BST) while ensuring all intermediate steps are valid.
 
@@ -23,22 +24,25 @@ def generate_tree(oracle, depth=0, min_value=-float('inf'), max_value=float('inf
     - A valid BST.
     """
     # Sample the root value within the valid range
+    if len(range(int(min_value) + 1, int(max_value))) == 0:
+        return None
+
     value = random.choice(range(int(min_value) + 1, int(max_value)))
     tree = BinarySearchTree(value)
 
     # Decide whether to generate left and right subtrees
     if depth < MAX_DEPTH and random.choice([True, False]):
         # For left child, restrict max value to current node's value
-        tree.left = generate_tree(oracle, depth + 1, min_value, value)
+        tree.left = generate_tree(depth + 1, min_value, value)
 
     if depth < MAX_DEPTH and random.choice([True, False]):
         # For right child, restrict min value to current node's value
-        tree.right = generate_tree(oracle, depth + 1, value, max_value)
+        tree.right = generate_tree(depth + 1, value, max_value)
 
     return tree
 
 
-def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
+def fuzz(unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     sizes = list()
@@ -47,17 +51,17 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     for i in range(trials):
         print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), (len(valid_set) * 100 / valids) if valids != 0 else 0), end='\r')
-        tree = generate_tree(oracle)
+        # Node values range from 0 to 9
+        tree = generate_tree(min_value=min(VALUES) - 1, max_value=max(VALUES))
         if tree.valid():
             valids += 1
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
                 sizes.append(tree.depth())
-                oracle.reward(unqiue_valid)
             else:
-                oracle.reward(valid)
+                valid += 1  # Simulate a reward mechanism if needed
         else:
-            oracle.reward(invalid)
+            invalid += 1  # Simulate a reward mechanism if needed
     print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
         trials, valids, len(valid_set), len(valid_set) * 100 / valids), end='\r')
     print("\ndone!", file=sys.stderr)
@@ -65,16 +69,5 @@ def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
 
 
 if __name__ == '__main__':
-    print("====Random====")
-    oracle_r = RandomOracle()
-    fuzz(oracle_r)
-    print("====RL: Sequence====")
-    oracle_s = RLOracle(sequence_ngram_fn(4), epsilon=0.25)
-    fuzz(oracle_s, unqiue_valid=20, valid=0, invalid=-1)
-    print("====RL: Tree====")
-    oracle_t = RLOracle(parent_state_ngram_fn(4, MAX_DEPTH), epsilon=0.25)
-    fuzz(oracle_t, unqiue_valid=20, valid=0, invalid=-1)
-    print("====RL: Tree L/R====")
-    oracle_lrt = RLOracle(
-        left_right_parent_state_ngram_fn(4, MAX_DEPTH), epsilon=0.25)
-    fuzz(oracle_lrt, unqiue_valid=20, valid=0, invalid=-1)
+    print("====Target====")
+    fuzz()
