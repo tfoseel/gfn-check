@@ -8,7 +8,7 @@ from generators.Random import RandomOracle
 from generators.GFN_flow_matching import GFNOracle
 from tqdm import tqdm
 
-MAX_DEPTH = 4
+MAX_DEPTH = 2
 VALUES = range(0, 11)
 LEFT = [True, False]
 RIGHT = [True, False]
@@ -44,14 +44,16 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0):
             tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")
         else:
             tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
-        
+
         if tree.valid():
             valids += 1
             if tree.__repr__() not in valid_set:
-                oracle.compute_flow_matching_loss(validity=True, uniqueness=True)
+                oracle.compute_flow_matching_loss(
+                    validity=True, uniqueness=True)
                 valid_set.add(tree.__repr__())
             else:
-                oracle.compute_flow_matching_loss(validity=False, uniqueness=False)
+                oracle.compute_flow_matching_loss(
+                    validity=False, uniqueness=False)
         else:
             oracle.compute_flow_matching_loss(validity=False, uniqueness=False)
 

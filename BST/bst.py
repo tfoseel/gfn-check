@@ -51,5 +51,10 @@ class BinarySearchTree:
             right_geq_than = self.right.all_values_geq_than(value)
         return left_geq_than and right_geq_than
 
+    def depth(self):
+        left_depth = self.left.depth() if self.left else 0
+        right_depth = self.right.depth() if self.right else 0
+        return max(left_depth, right_depth) + 1
+
     def __repr__(self):
         return "({} L{} R{})".format(self.value, self.left, self.right)
