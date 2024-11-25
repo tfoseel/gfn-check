@@ -14,18 +14,30 @@ LEFT = [True, False]
 RIGHT = [True, False]
 
 
-def generate_tree(oracle, depth=0):
+def generate_tree(oracle, depth=0, pruning=True):
     num_nodes = 0
-    value = oracle.select(VALUES, 1)
+    value = oracle.select(1)
     tree = BinarySearchTree(value)
     num_nodes += 1
-    if depth < MAX_DEPTH and oracle.select(LEFT, 2):
-        tree.left, l_num_nodes = generate_tree(oracle, depth + 1)
+    
+    if pruning and not tree.valid():
+        return tree, num_nodes, False
+
+    if depth < MAX_DEPTH and oracle.select(2):
+        tree.left, l_num_nodes, validity = generate_tree(oracle, depth + 1)
         num_nodes += l_num_nodes
-    if depth < MAX_DEPTH and oracle.select(RIGHT, 3):
-        tree.right, r_num_nodes = generate_tree(oracle, depth + 1)
+
+        if pruning and not validity:
+            return tree, num_nodes, False
+
+    if depth < MAX_DEPTH and oracle.select(3):
+        tree.right, r_num_nodes, validity = generate_tree(oracle, depth + 1)
         num_nodes += r_num_nodes
-    return tree, num_nodes
+
+        if pruning and not validity:
+            return tree, num_nodes, False
+
+    return tree, num_nodes, tree.valid()
 
 
 def fuzz(oracle, unique_valid=1, valid=1, invalid=0):
