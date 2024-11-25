@@ -8,7 +8,7 @@ from generators.Random import RandomOracle
 from generators.GFN_trajectory_balance import GFNOracle
 from tqdm import tqdm
 
-MAX_DEPTH = 4
+MAX_DEPTH = 2
 VALUES = range(0, 11)
 LEFT = [True, False]
 RIGHT = [True, False]
@@ -47,12 +47,12 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0):
         
         if tree.valid():
             valids += 1
-            # if tree.__repr__() not in valid_set:
-            #     valid_set.add(tree.__repr__())
-            #     oracle.reward(unique_valid)
-            # else:
-            #     oracle.reward(valid)
-            oracle.reward(10 ** num_nodes)
+            if tree.__repr__() not in valid_set:
+                valid_set.add(tree.__repr__())
+                oracle.reward(unique_valid)
+            else:
+                oracle.reward(valid)
+            # oracle.reward(10 ** num_nodes)
         else:
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())

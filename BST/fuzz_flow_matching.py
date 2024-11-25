@@ -8,7 +8,7 @@ from generators.Random import RandomOracle
 from generators.GFN_flow_matching import GFNOracle
 from tqdm import tqdm
 
-MAX_DEPTH = 4
+MAX_DEPTH = 2
 VALUES = range(0, 11)
 LEFT = [True, False]
 RIGHT = [True, False]

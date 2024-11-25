@@ -57,7 +57,7 @@ class GFNOracle(nn.Module):
                     {'params': itertools.chain(
                         *(learner.action_selector.parameters() for learner in self.learners.values()))},
                 ],
-                lr=0.0001,
+                lr=0.001,
             )
         else:
             self.optimizer_policy = torch.optim.Adam(
@@ -67,7 +67,7 @@ class GFNOracle(nn.Module):
                     {'params': itertools.chain(
                         *(learner.action_selector.parameters() for learner in self.learners.values()))},
                 ],
-                lr=0.0001,
+                lr=0.001,
             )
         self.optimizer_logZ = torch.optim.Adam(
             [{'params': [self.logZ], 'lr': 0.1}],
@@ -142,9 +142,9 @@ class GFNLearner:
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
         # epsilon greedy
-        # if np.random.binomial(1, 0.5):
-        #     sampled_index = random.choice(range(len(self.domain)))
-        # else:
-        #     sampled_index = torch.multinomial(probs, 1).item()
-        sampled_index = torch.multinomial(probs, 1).item()
+        if np.random.binomial(1, 0.5):
+            sampled_index = random.choice(range(len(self.domain)))
+        else:
+            sampled_index = torch.multinomial(probs, 1).item()
+        # sampled_index = torch.multinomial(probs, 1).item()
         return self.domain[sampled_index], torch.log(probs[0][sampled_index]), probs
