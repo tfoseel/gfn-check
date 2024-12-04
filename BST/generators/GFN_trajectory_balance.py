@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
+# torch.autograd.set_detect_anomaly(True)
 from collections import defaultdict
 import numpy as np
 import itertools
@@ -10,19 +11,16 @@ from tqdm import tqdm
 
 losses = []
 
-
 class GFNOracle(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
+    def __init__(self, embedding_dim, hidden_dim, domains):
         super(GFNOracle, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.vocab = dict()
-        self.transformer = transformer
-        if transformer:
-            self.hidden_dim = embedding_dim
-            hidden_dim = embedding_dim
+        self.hidden_dim = embedding_dim
+        hidden_dim = embedding_dim
         # 1 for embedding for empty sequence, and the other is total vocabulary size
         vocab_idx = 1
         for domain, idx in domains:
@@ -37,8 +35,6 @@ class GFNOracle(nn.Module):
         self.beta = 1
         self.logZ = nn.Parameter(torch.tensor(5.0))
         self.logZ_lower = 10
-        self.lstm_pf = nn.LSTM(input_size=embedding_dim,
-                               hidden_size=self.hidden_dim, batch_first=True)
 
         transformer_layer = nn.TransformerEncoderLayer(
             d_model=embedding_dim, nhead=1)
@@ -49,26 +45,15 @@ class GFNOracle(nn.Module):
         self.beta = 10
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
-        if transformer:
-            self.optimizer_policy = torch.optim.Adam(
-                [
-                    {'params': self.embedding_layer.parameters()},
-                    {'params': self.transformer_pf.parameters()},
-                    {'params': itertools.chain(
-                        *(learner.action_selector.parameters() for learner in self.learners.values()))},
-                ],
-                lr=0.001,
-            )
-        else:
-            self.optimizer_policy = torch.optim.Adam(
-                [
-                    {'params': self.embedding_layer.parameters()},
-                    {'params': self.lstm_pf.parameters()},
-                    {'params': itertools.chain(
-                        *(learner.action_selector.parameters() for learner in self.learners.values()))},
-                ],
-                lr=0.001,
-            )
+        self.optimizer_policy = torch.optim.Adam(
+            [
+                {'params': self.embedding_layer.parameters(), 'lr': 0.001},  # Lower learning rate for embedding layer
+                {'params': self.transformer_pf.parameters(), 'lr': 0.001},    # Default learning rate for transformer_pf
+                {'params': itertools.chain(
+                    *(learner.action_selector.parameters() for learner in self.learners.values())), 'lr': 0.001},  # Default learning rate for action selectors
+            ],
+            lr=0.001,  # This will act as the default learning rate if not specified explicitly
+        )
         self.optimizer_logZ = torch.optim.Adam(
             [{'params': [self.logZ], 'lr': 0.1}],
         )
@@ -80,20 +65,18 @@ class GFNOracle(nn.Module):
     def encode_choice_sequence(self):
         return [0] + list(map(lambda x: self.vocab[x[0]][x[1]], self.choice_sequence))
 
-    def select(self, domain, idx):
+    def select(self, idx):
         # Get hidden state
         # print("Encoding: ", self.encode_choice_sequence())
+        
         sequence_embeddings = self.embedding_layer(
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
         )
+        # print("Embedding: ", sequence_embeddings)
         # print(sequence_embeddings)
-        if self.transformer:
-            hidden = self.transformer_pf(sequence_embeddings)
-            hidden = hidden[:, 0, :]
-        else:
-            _, (hidden, _) = self.lstm_pf(sequence_embeddings)
-            hidden = hidden[-1]  # shape: (1, hidden_dim)
+        hidden = self.transformer_pf(sequence_embeddings)
+        hidden = hidden[:, 0, :]
         # Select action based on the hidden state
         choice, log_prob, probs = self.learners[idx].policy(hidden)
         # if len(self.encode_choice_sequence()) == 2:
@@ -115,7 +98,7 @@ class GFNOracle(nn.Module):
             self.optimizer_logZ.zero_grad()
             self.loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 10)
-            tqdm.write(str(list(map(lambda x: x[1], self.choice_sequence))))
+            # tqdm.write(str(list(map(lambda x: x[1], self.choice_sequence))))
             # print("Running mean 100: ", sum(
             #     losses[-100:]) / 100, "log Z: ", self.logZ.item())
             self.optimizer_policy.step()

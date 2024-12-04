@@ -50,25 +50,22 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0):
         tqdm.write("=========")
         tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / valids if valids != 0 else 0), end='\r')
-        tree, num_nodes = generate_tree(oracle)
+        tree, num_nodes, validity = generate_tree(oracle)
         tqdm.write("Tree with {} nodes".format(num_nodes))
-        if tree.valid():
+        if validity:
             tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")
-        else:
-            tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
-        
-        if tree.valid():
             valids += 1
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
                 oracle.reward(unique_valid)
             else:
                 oracle.reward(valid)
-            # oracle.reward(10 ** num_nodes)
         else:
+            tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())
             oracle.reward(invalid)
+        
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
     tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
         trials, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / valids), end='\r')
@@ -92,5 +89,5 @@ if __name__ == '__main__':
     # fuzz(oracle_lrt, unqiue_valid=20, valid=0, invalid=-1)
     print("====GFN====")
     oracle_g = GFNOracle(
-        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)], transformer=False)
+        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
     fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
