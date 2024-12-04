@@ -91,20 +91,24 @@ class GFNOracle(nn.Module):
 
     def compute_flow_matching_loss(self, validity, uniqueness):
         """Compute the flow matching loss based on rewards."""
+        if validity and uniqueness:
+            reward = 10
+        elif validity:
+            reward = 1
+        else:
+            reward = 0
+        reward = torch.log(torch.Tensor([reward]))
+
 
         loss = torch.tensor(0.0)
         # tqdm.write(f"Prev curr: {[(x[0].item(), x[1].item()) for x in self.prev_curr]}")
-
         for idx, (prev, curr) in enumerate(self.prev_curr):
-            loss += (prev - curr) ** 2
+            prev = torch.log(prev)
+            curr = torch.log(curr)
             if idx == len(self.prev_curr) - 1: # Last step
-                if validity and uniqueness:
-                    loss += (curr - 10) ** 2
-                elif validity:
-                    loss += (curr - 10) ** 2
-                else:
-                    loss += (curr) ** 2
-
+                loss += (curr - reward * self.beta) ** 2
+            else:
+                loss += (prev - curr) ** 2
         self.flow_matching_loss += loss
         tqdm.write(f"Flow matching loss: {loss.item()}")
         self.num_generation += 1
