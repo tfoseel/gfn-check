@@ -17,8 +17,7 @@ class GFNOracle(nn.Module):
         self.hidden_dim = hidden_dim
         self.vocab = dict()
         self.transformer = transformer
-        self.Z = torch.tensor(100.0, requires_grad=True)
-        self.prev_flow = self.Z
+        self.prev_flow = 0
         self.prev_curr = []
         if transformer:
             self.hidden_dim = embedding_dim
@@ -57,7 +56,6 @@ class GFNOracle(nn.Module):
                 {'params': self.transformer_pf.parameters()},
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
-                {'params': [self.Z], 'lr': 1.0}  # Set lr for self.Z to 1
             ],
             lr=1,  # Default learning rate for other parameters
         )
@@ -80,7 +78,7 @@ class GFNOracle(nn.Module):
 
         decision_idx, domain, flows = self.learners[learner_idx].policy(hidden)
         if len(self.encode_choice_sequence()) == 2:
-            tqdm.write(f"Z: {self.Z}, Flows: {str(flows)}")
+            tqdm.write(f"Flows: {str(flows)}")
         self.prev_curr.append((self.prev_flow, flows.sum()))
         self.prev_flow = flows[decision_idx]
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
@@ -102,6 +100,8 @@ class GFNOracle(nn.Module):
         for idx, (prev, curr) in enumerate(self.prev_curr):
             prev = torch.log(prev)
             curr = torch.log(curr)
+            if idx == 0: # First step
+                continue
             if idx == len(self.prev_curr) - 1: # Last step
                 loss += (curr - reward * self.beta) ** 2
             else:
