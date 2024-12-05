@@ -1,12 +1,9 @@
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
-from collections import defaultdict
-import numpy as np
 import itertools
-import math
-import random
 from tqdm import tqdm
+import math
 
 losses = []
 
@@ -92,12 +89,12 @@ class GFNOracle(nn.Module):
     def compute_flow_matching_loss(self, validity, uniqueness):
         """Compute the flow matching loss based on rewards."""
         if validity and uniqueness:
-            reward = 10
+            reward = 20
         elif validity:
             reward = 1
         else:
-            reward = 0
-        reward = torch.log(torch.Tensor([reward]))
+            reward = 10e-20
+        reward = math.log(reward)
 
 
         loss = torch.tensor(0.0)

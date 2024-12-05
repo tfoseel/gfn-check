@@ -8,21 +8,18 @@ from generators.Random import RandomOracle
 from generators.GFN_trajectory_balance import GFNOracle
 from tqdm import tqdm
 
-MAX_DEPTH = 2
+MAX_DEPTH = 4
 VALUES = range(0, 11)
 LEFT = [True, False]
 RIGHT = [True, False]
 
 
-def generate_tree(oracle, depth=0, pruning=True):
+def generate_tree(oracle, depth=0, pruning=True):c
     num_nodes = 0
     value = oracle.select(1)
     tree = BinarySearchTree(value)
     num_nodes += 1
     
-    if pruning and not tree.valid():
-        return tree, num_nodes, False
-
     if depth < MAX_DEPTH and oracle.select(2):
         tree.left, l_num_nodes, validity = generate_tree(oracle, depth + 1)
         num_nodes += l_num_nodes
@@ -89,5 +86,5 @@ if __name__ == '__main__':
     # fuzz(oracle_lrt, unqiue_valid=20, valid=0, invalid=-1)
     print("====GFN====")
     oracle_g = GFNOracle(
-        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+        32, 16, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
     fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)

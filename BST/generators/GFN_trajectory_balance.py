@@ -33,7 +33,7 @@ class GFNOracle(nn.Module):
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
         self.beta = 1
-        self.logZ = nn.Parameter(torch.tensor(5.0))
+        self.logZ = nn.Parameter(torch.tensor(5.0), requires_grad=True)
         self.logZ_lower = 10
 
         transformer_layer = nn.TransformerEncoderLayer(
@@ -52,10 +52,10 @@ class GFNOracle(nn.Module):
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values())), 'lr': 0.001},  # Default learning rate for action selectors
             ],
-            lr=0.001,  # This will act as the default learning rate if not specified explicitly
+            lr=0.01,  # This will act as the default learning rate if not specified explicitly
         )
         self.optimizer_logZ = torch.optim.Adam(
-            [{'params': [self.logZ], 'lr': 0.1}],
+            [{'params': [self.logZ], 'lr': 1}],
         )
 
     def clamp_logZ(self):

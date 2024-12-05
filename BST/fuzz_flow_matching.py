@@ -20,9 +20,6 @@ def generate_tree(oracle, depth=0, pruning=True):
     tree = BinarySearchTree(value)
     num_nodes += 1
 
-    if pruning and not tree.valid():
-        return tree, num_nodes, False
-
     if depth < MAX_DEPTH and oracle.select(2):
         tree.left, l_num_nodes, validity = generate_tree(oracle, depth + 1)
         num_nodes += l_num_nodes
