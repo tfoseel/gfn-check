@@ -14,7 +14,7 @@ LEFT = [True, False]
 RIGHT = [True, False]
 
 
-def generate_tree(oracle, depth=0, pruning=True):c
+def generate_tree(oracle, depth=0, pruning=True):
     num_nodes = 0
     value = oracle.select(1)
     tree = BinarySearchTree(value)
