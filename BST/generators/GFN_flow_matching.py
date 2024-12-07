@@ -16,7 +16,7 @@ class GFNOracle(nn.Module):
         self.hidden_dim = hidden_dim
         self.vocab = dict()
         self.transformer = transformer
-        self.prev_flow = 0
+        self.prev_flow = torch.Tensor(0)
         self.prev_curr = []
         if transformer:
             self.hidden_dim = embedding_dim
@@ -109,7 +109,6 @@ class GFNOracle(nn.Module):
         # Reset choice sequence after updating
         self.choice_sequence = []
         self.prev_curr = []
-        self.prev_flow = self.Z
 
 class GFNLearner:
     def __init__(self, hidden_dim, domain):
