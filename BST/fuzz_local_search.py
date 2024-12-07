@@ -5,7 +5,7 @@ from bst import BinarySearchTree
 from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
 from generators.RL import RLOracle
 from generators.Random import RandomOracle
-from generators.GFN_trajectory_balance import GFNOracle
+from generators.GFN_local_search import GFNOracle
 from tqdm import tqdm
 
 MAX_DEPTH = 2
@@ -51,6 +51,14 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0):
         tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / valids if valids != 0 else 0), end='\r')
         tree, num_nodes, validity = generate_tree(oracle)
+        for i in range(10):
+            oracle.choice_sequence = oracle.choice_sequence[:len(oracle.choice_sequence)//2]
+            depth = oracle.calculate_depth()
+            new_tree, new_num_nodes, new_validity = generate_tree(oracle, depth)
+            if validity and tree.__repr__() not in valid_set:
+                tree, num_nodes, validity = new_tree, new_num_nodes, new_validity
+                break
+        
         tqdm.write("Tree with {} nodes".format(num_nodes))
         if validity:
             tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")

@@ -111,8 +111,19 @@ class GFNOracle(nn.Module):
         self.logPf = torch.tensor(0.0)
 
     def calculate_depth(self):
-        pass
-        
+    # Start with depth 0 (root node is at level 0)
+        depth = 0
+        for a, b, _ in self.choice_sequence:
+            if a == 1:
+                # Root node (level 0)
+                depth = max(depth, 0)  # Root is at level 0
+            elif a == 2 and b:
+                # Left child exists, increase depth to level 1
+                depth = max(depth, 1)
+            elif a == 3 and b:
+                # Right child exists, increase depth to level 1
+                depth = max(depth, 1)
+        return depth
 
 
 class GFNLearner:
