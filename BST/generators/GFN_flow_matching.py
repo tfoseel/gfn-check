@@ -122,4 +122,3 @@ class GFNLearner:
         probs = F.softmax(flows, dim=-1)  # Convert to probabilities
         sampled_index = torch.multinomial(probs, 1).item()
         return sampled_index, self.domain, flows
-
