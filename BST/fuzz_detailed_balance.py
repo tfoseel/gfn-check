@@ -5,10 +5,10 @@ from bst import BinarySearchTree
 from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
 from generators.RL import RLOracle
 from generators.Random import RandomOracle
-from generators.GFN_flow_matching import GFNOracle
+from generators.GFN_detailed_balance import GFNOracle
 from tqdm import tqdm
 
-MAX_DEPTH = 4
+MAX_DEPTH = 2
 VALUES = range(0, 11)
 LEFT = [True, False]
 RIGHT = [True, False]
@@ -19,6 +19,7 @@ def generate_tree(oracle, depth=0, pruning=True):
     value = oracle.select(1)
     tree = BinarySearchTree(value)
     num_nodes += 1
+
     if depth < MAX_DEPTH and oracle.select(2):
         tree.left, l_num_nodes, validity = generate_tree(oracle, depth + 1)
         num_nodes += l_num_nodes
@@ -46,22 +47,24 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0):
         tqdm.write("=========")
         tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / valids if valids != 0 else 0))
-        tree, num_nodes = generate_tree(oracle)
+        tree, num_nodes, validity = generate_tree(oracle)
         tqdm.write("Tree with {} nodes".format(num_nodes))
-        if tree.valid():
+        if validity:
             tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")
         else:
             tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
-        
-        if tree.valid():
+
+        if validity:
             valids += 1
             if tree.__repr__() not in valid_set:
-                oracle.compute_flow_matching_loss(validity=True, uniqueness=True)
+                oracle.compute_detailed_balance(
+                    validity=True, uniqueness=True)
                 valid_set.add(tree.__repr__())
             else:
-                oracle.compute_flow_matching_loss(validity=False, uniqueness=False)
+                oracle.compute_detailed_balance(
+                    validity=False, uniqueness=False)
         else:
-            oracle.compute_flow_matching_loss(validity=False, uniqueness=False)
+            oracle.compute_detailed_balance(validity=False, uniqueness=False)
 
         tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
             trials, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / (valids + 1)), end='\r')
