@@ -7,9 +7,9 @@ import math
 
 losses = []
 
-class GFNOracle(nn.Module):
+class GFNOracle_flow_matching(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
-        super(GFNOracle, self).__init__()
+        super(GFNOracle_flow_matching, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
@@ -83,7 +83,7 @@ class GFNOracle(nn.Module):
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
         return domain[decision_idx]
 
-    def compute_flow_matching_loss(self, reward):
+    def reward(self, reward):
         """Compute the flow matching loss based on rewards."""
         reward = math.log(reward)
         loss = torch.tensor(0.0)

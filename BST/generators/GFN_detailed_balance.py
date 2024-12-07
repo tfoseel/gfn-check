@@ -8,9 +8,9 @@ import math
 losses = []
 
 
-class GFNOracle(nn.Module):
+class GFNOracle_detailed_balance(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
-        super(GFNOracle, self).__init__()
+        super(GFNOracle_detailed_balance, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
@@ -87,15 +87,8 @@ class GFNOracle(nn.Module):
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
         return domain[decision_idx]
 
-    def compute_detailed_balance(self, validity, uniqueness):
-        """Compute the detailed balance loss based on rewards."""
-        # Assign rewards without log
-        if validity and uniqueness:
-            reward = 20
-        elif validity:
-            reward = 1
-        else:
-            reward = 10e-20  # Very small positive reward
+    def reward(self, reward):
+        reward = reward
 
         # Calculate loss
         # For all steps except the first:

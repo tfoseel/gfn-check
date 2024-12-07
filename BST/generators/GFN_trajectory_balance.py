@@ -11,9 +11,9 @@ from tqdm import tqdm
 
 losses = []
 
-class GFNOracle(nn.Module):
+class GFNOracle_trajectory_balance(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains):
-        super(GFNOracle, self).__init__()
+        super(GFNOracle_trajectory_balance, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
