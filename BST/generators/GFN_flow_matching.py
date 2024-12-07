@@ -7,7 +7,6 @@ import math
 
 losses = []
 
-
 class GFNOracle(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
         super(GFNOracle, self).__init__()
@@ -84,19 +83,10 @@ class GFNOracle(nn.Module):
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
         return domain[decision_idx]
 
-    def compute_flow_matching_loss(self, validity, uniqueness):
+    def compute_flow_matching_loss(self, reward):
         """Compute the flow matching loss based on rewards."""
-        if validity and uniqueness:
-            reward = 20
-        elif validity:
-            reward = 1
-        else:
-            reward = 10e-20
         reward = math.log(reward)
-
-
         loss = torch.tensor(0.0)
-        # tqdm.write(f"Prev curr: {[(x[0].item(), x[1].item()) for x in self.prev_curr]}")
         for idx, (prev, curr) in enumerate(self.prev_curr):
             prev = torch.log(prev)
             curr = torch.log(curr)
@@ -109,7 +99,6 @@ class GFNOracle(nn.Module):
         self.flow_matching_loss += loss
         tqdm.write(f"Flow matching loss: {loss.item()}")
         self.num_generation += 1
-
         if self.num_generation > 0 and self.num_generation % 10 == 0:
             self.optimizer_policy.zero_grad()
             self.flow_matching_loss.backward()
@@ -132,8 +121,6 @@ class GFNLearner:
     def policy(self, hidden):
         flows = F.softplus(self.action_selector(hidden)[0])
         probs = F.softmax(flows, dim=-1)  # Convert to probabilities
-
         sampled_index = torch.multinomial(probs, 1).item()
-
         return sampled_index, self.domain, flows
 

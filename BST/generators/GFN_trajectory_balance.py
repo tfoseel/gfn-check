@@ -66,22 +66,14 @@ class GFNOracle(nn.Module):
         return [0] + list(map(lambda x: self.vocab[x[0]][x[1]], self.choice_sequence))
 
     def select(self, idx):
-        # Get hidden state
-        # print("Encoding: ", self.encode_choice_sequence())
-        
         sequence_embeddings = self.embedding_layer(
             torch.tensor(self.encode_choice_sequence(),
                          dtype=torch.long).unsqueeze(0)
         )
-        # print("Embedding: ", sequence_embeddings)
-        # print(sequence_embeddings)
         hidden = self.transformer_pf(sequence_embeddings)
         hidden = hidden[:, 0, :]
         # Select action based on the hidden state
         choice, log_prob, probs = self.learners[idx].policy(hidden)
-        # if len(self.encode_choice_sequence()) == 2:
-        #     print("Choice: ", choice)
-        #     print(probs)
         self.choice_sequence.append((idx, choice, log_prob))
         self.logPf = self.logPf + log_prob
         return choice
@@ -98,9 +90,6 @@ class GFNOracle(nn.Module):
             self.optimizer_logZ.zero_grad()
             self.loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 10)
-            # tqdm.write(str(list(map(lambda x: x[1], self.choice_sequence))))
-            # print("Running mean 100: ", sum(
-            #     losses[-100:]) / 100, "log Z: ", self.logZ.item())
             self.optimizer_policy.step()
             self.optimizer_logZ.step()
             self.loss = torch.tensor(0.0)
@@ -109,11 +98,7 @@ class GFNOracle(nn.Module):
         # Reset choice sequence after updating
         self.choice_sequence = []
         self.logPf = torch.tensor(0.0)
-
-    def calculate_depth(self):
-        pass
         
-
 
 class GFNLearner:
     def __init__(self, hidden_dim, domain):
