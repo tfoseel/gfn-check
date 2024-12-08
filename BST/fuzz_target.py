@@ -2,12 +2,9 @@ import sys
 import random
 from collections import Counter
 from bst import BinarySearchTree
-from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
-from generators.RL import RLOracle
-from generators.Random import RandomOracle
 
-MAX_DEPTH = 2
-VALUES = range(0, 4)
+MAX_DEPTH = 5
+VALUES = range(0, 10)
 
 
 def generate_tree(depth=0, min_value=-float('inf'), max_value=float('inf')):

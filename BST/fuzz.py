@@ -11,13 +11,13 @@ from generators.GFN_local_search import GFNOracle_local_search
 from generators.GFN_flow_matching import GFNOracle_flow_matching
 from tqdm import tqdm
 
-MAX_DEPTH = 2
-VALUES = range(0, 3)
+MAX_DEPTH = 3
+VALUES = range(1, 3)
 LEFT = [True, False]
 RIGHT = [True, False]
 
 
-def generate_tree(oracle, depth=0, pruning=True):
+def generate_tree(oracle, depth=0, pruning=False):
     num_nodes = 0
     value = oracle.select(1)
     tree = BinarySearchTree(value)
@@ -48,7 +48,7 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0, local_search=False, local_s
     print("Starting!", file=sys.stderr)
     valid_set = set()
     invalid_set = set()
-    trials = 100
+    trials = 10000
     for i in tqdm(range(trials)):
         tqdm.write("=========")
         tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
@@ -85,6 +85,23 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0, local_search=False, local_s
 
 if __name__ == '__main__':
     print("====GFN====")
+
+    print("====Random====")
+    oracle_r = RandomOracle([(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+    fuzz(oracle_r)
+
+    # print("====RL: Sequence====")
+    # oracle_s = RLOracle(sequence_ngram_fn(4), epsilon=0.25)
+    # fuzz(oracle_s, unqiue_valid=20, valid=0, invalid=-1)
+
+    # print("====RL: Tree====")
+    # oracle_t = RLOracle(parent_state_ngram_fn(4, MAX_DEPTH), epsilon=0.25)
+    # fuzz(oracle_t, unqiue_valid=20, valid=0, invalid=-1)
+
+    # print("====RL: Tree L/R====")
+    # oracle_lrt = RLOracle(
+    #     left_right_parent_state_ngram_fn(4, MAX_DEPTH), domains=[(VALUES, 1), (LEFT, 2), (RIGHT, 3)], epsilon=0.25)
+    # fuzz(oracle_lrt, unique_valid=20, valid=0, invalid=-1)
 
     # oracle_g = GFNOracle_trajectory_balance(
     #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
