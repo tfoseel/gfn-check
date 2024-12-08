@@ -76,8 +76,8 @@ class GFNOracle_flow_matching(nn.Module):
             hidden = hidden[-1]  # shape: (1, hidden_dim)
 
         decision_idx, domain, flows = self.learners[learner_idx].policy(hidden)
-        if len(self.encode_choice_sequence()) == 2:
-            tqdm.write(f"Flows: {str(flows)}")
+        # if len(self.encode_choice_sequence()) == 2:
+        #     tqdm.write(f"Flows: {str(flows)}")
         self.prev_curr.append((self.prev_flow, flows.sum()))
         self.prev_flow = flows[decision_idx]
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
@@ -97,7 +97,7 @@ class GFNOracle_flow_matching(nn.Module):
             else:
                 loss += (prev - curr) ** 2
         self.flow_matching_loss += loss
-        tqdm.write(f"Flow matching loss: {loss.item()}")
+        # tqdm.write(f"Flow matching loss: {loss.item()}")
         self.num_generation += 1
         if self.num_generation > 0 and self.num_generation % 10 == 0:
             self.optimizer_policy.zero_grad()

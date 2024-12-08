@@ -11,34 +11,37 @@ from generators.GFN_flow_matching import GFNOracle_flow_matching
 from tqdm import tqdm
 
 
-def fuzz(oracle, unique_valid, valid, invalid, model=False, local_search_steps=None):
+def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps, verbose):
+
     valids = 0
-    print("Starting!", file=sys.stderr)
     valid_set = set()
     invalid_set = set()
-    trials = 10000
 
-    for i in tqdm(range(trials)):
-        tqdm.write("=========")
-        tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
-            i, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / valids if valids != 0 else 0), end='\r')
+    progress_bar = tqdm(range(trials))
+    for i in progress_bar:
+        if verbose:
+            tqdm.write("=========")
 
         tree, num_nodes, validity = generate_tree(oracle, MAX_DEPTH)
 
         if model == "LS":
             assert local_search_steps is not None
+
             for i in range(local_search_steps):
                 oracle.choice_sequence = oracle.choice_sequence[:len(oracle.choice_sequence)//2]
                 depth = oracle.calculate_depth()
                 new_tree, new_num_nodes, new_validity = generate_tree(oracle, MAX_DEPTH, depth)
+
                 if validity and tree.__repr__() not in valid_set:
                     tree, num_nodes, validity = new_tree, new_num_nodes, new_validity
                     break
 
-        tqdm.write("Tree with {} nodes".format(num_nodes))
+        if verbose:
+            tqdm.write("Tree with {} nodes".format(num_nodes))
 
         if validity:
-            tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")
+            if verbose:
+                tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")
             valids += 1
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
@@ -46,19 +49,22 @@ def fuzz(oracle, unique_valid, valid, invalid, model=False, local_search_steps=N
             else:
                 oracle.reward(valid)
         else:
-            tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
+            if verbose:
+                tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())
             # oracle.reward(invalid)
         
+        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} invalids)\033[0m / {:.2f}% unique valids".format(
+            i, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
+
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
-    tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
-        trials, valids, len(valid_set), len(invalid_set), len(valid_set) * 100 / valids), end='\r')
     tqdm.write("\ndone!", file=sys.stderr)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--trials", type=int, dest="trials", help="Number of trials", default=10000)
     parser.add_argument("--model", type=str, dest="model", help="Experiment type. RL / FM / TB / DB / LS", default="FM")
     parser.add_argument("--depth", type=int, dest="depth", help="Max depth of the tree", default=3)
     parser.add_argument("--value_range", type=int, dest="value_range", help="Range of values", default=3)
@@ -67,16 +73,19 @@ if __name__ == '__main__':
     parser.add_argument("--epsilon", type=float, dest="epsilon", help="Epsilon", default=0.25)
     parser.add_argument("--embedding_dim", type=int, dest="embedding_dim", help="Embedding dimension", default=128)
     parser.add_argument("--hidden_dim", type=int, dest="hidden_dim", help="Hidden dimension", default=128)
+    parser.add_argument("--verbose", dest="verbose", help="Verbose", action="store_true", default=False)
 
     args = parser.parse_args()
 
-    # RL / GFN
+    # Training
+    TRIALS = args.trials
     MODEL = args.model
     STATE_ABSTRACTION = args.state_abstraction
     LS_STEPS = args.local_search_steps
     EPSILON = args.epsilon
     EMBEDDING_DIM = args.embedding_dim
     HIDDEN_DIM = args.hidden_dim
+    VERBOSE = args.verbose
 
     # BST
     MAX_DEPTH = args.depth
@@ -92,11 +101,13 @@ if __name__ == '__main__':
 
     # Fuzz args
     fuzz_kwargs = {
+        "trials": TRIALS,
         "unique_valid": UNIQUE_VALID,
         "valid": VALID,
         "invalid": INVALID,
         "model": MODEL,
-        "local_search_steps": LS_STEPS
+        "local_search_steps": LS_STEPS,
+        "verbose": VERBOSE
     }
 
     if MODEL == "RL":
