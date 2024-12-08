@@ -8,25 +8,21 @@ import math
 losses = []
 
 class GFNOracle_flow_matching(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
+    def __init__(self, embedding_dim, hidden_dim, domains):
         super(GFNOracle_flow_matching, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.vocab = dict()
-        self.transformer = transformer
         self.prev_flow = torch.Tensor(0)
         self.prev_curr = []
-        if transformer:
-            self.hidden_dim = embedding_dim
-            hidden_dim = embedding_dim
 
         # Initialize vocabulary and learners
         vocab_idx = 1
         for domain, idx in domains:
             domain = list(domain)
-            self.learners[idx] = GFNLearner(hidden_dim, domain)
+            self.learners[idx] = GFNLearner(self.hidden_dim, domain)
             self.vocab[idx] = dict()
             for x in domain:
                 self.vocab[idx][x] = vocab_idx
@@ -37,8 +33,6 @@ class GFNOracle_flow_matching(nn.Module):
 
         # Model parameters
         self.beta = 1
-        self.lstm_pf = nn.LSTM(input_size=embedding_dim,
-                               hidden_size=self.hidden_dim, batch_first=True)
 
         transformer_layer = nn.TransformerEncoderLayer(
             d_model=embedding_dim, nhead=1)
@@ -68,12 +62,8 @@ class GFNOracle_flow_matching(nn.Module):
         sequence_embeddings = self.embedding_layer(
             torch.tensor(self.encode_choice_sequence(), dtype=torch.long).unsqueeze(0)
         )
-        if self.transformer:
-            hidden = self.transformer_pf(sequence_embeddings)
-            hidden = hidden[:, 0, :]
-        else:
-            _, (hidden, _) = self.lstm_pf(sequence_embeddings)
-            hidden = hidden[-1]  # shape: (1, hidden_dim)
+        hidden = self.transformer_pf(sequence_embeddings)
+        hidden = hidden[:, 0, :]
 
         decision_idx, domain, flows = self.learners[learner_idx].policy(hidden)
         # if len(self.encode_choice_sequence()) == 2:

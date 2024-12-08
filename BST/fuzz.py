@@ -55,7 +55,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 invalid_set.add(tree.__repr__())
             # oracle.reward(invalid)
         
-        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} invalids)\033[0m / {:.2f}% unique valids".format(
+        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} unique)\033[0m / {:.2f}% unique valids".format(
             i, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument("--trials", type=int, dest="trials", help="Number of trials", default=10000)
     parser.add_argument("--model", type=str, dest="model", help="Experiment type. RL / FM / TB / DB / LS", default="FM")
     parser.add_argument("--depth", type=int, dest="depth", help="Max depth of the tree", default=3)
-    parser.add_argument("--value_range", type=int, dest="value_range", help="Range of values", default=3)
+    parser.add_argument("--value_range", type=int, dest="value_range", help="Range of values", default=10)
     parser.add_argument("--state_abstraction", type=str, dest="state_abstraction", help="State abstraction function", default="left_right_tree")
     parser.add_argument("--local_search_steps", type=int, dest="local_search_steps", help="Number of local search steps", default=5)
     parser.add_argument("--epsilon", type=float, dest="epsilon", help="Epsilon", default=0.25)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     DOMAINS = [(VALUES, 1), (LEFT, 2), (RIGHT, 3)]
 
     # Rewards
-    UNIQUE_VALID = 1
+    UNIQUE_VALID = 20
     VALID = 1
     INVALID = 0
 
