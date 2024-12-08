@@ -86,19 +86,19 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0, local_search=False, local_s
 if __name__ == '__main__':
     print("====GFN====")
 
-    oracle_g = GFNOracle_trajectory_balance(
-        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+    # oracle_g = GFNOracle_trajectory_balance(
+    #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+    # fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
 
     oracle_g = GFNOracle_detailed_balance(
         128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
     fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
 
-    oracle_g = GFNOracle_flow_matching(
-        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+    # oracle_g = GFNOracle_flow_matching(
+    #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+    # fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
 
-    oracle_g = GFNOracle_local_search(
-        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20, local_search=True, local_search_steps=5)
+    # oracle_g = GFNOracle_local_search(
+    #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
+    # fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20, local_search=True, local_search_steps=5)
     

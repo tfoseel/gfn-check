@@ -17,8 +17,7 @@ class GFNOracle_detailed_balance(nn.Module):
         self.hidden_dim = hidden_dim
         self.vocab = dict()
         self.transformer = transformer
-        self.prev_flow = 0.0
-        self.prev_curr = []
+        self.curr = []
         if transformer:
             self.hidden_dim = embedding_dim
             hidden_dim = embedding_dim
@@ -82,33 +81,31 @@ class GFNOracle_detailed_balance(nn.Module):
             tqdm.write(f"Flows: {str(flows)}")
 
         # Track flows
-        self.prev_curr.append((self.prev_flow, flows.sum()))
-        self.prev_flow = flows[decision_idx].item()
+        self.p_f= flows[decision_idx] / flows.sum()
+
+        self.curr.append((self.p_f, flows.sum()))
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
         return domain[decision_idx]
 
     def reward(self, reward):
-        reward = reward
-
+        reward = math.log(reward)
         # Calculate loss
         # For all steps except the first:
         # - Intermediate steps: (prev_in - curr_out)^2
         # - Terminal step: (prev_in - reward)^2
         # prev_in is the incoming flow at that step, curr_out is the outgoing flow
         loss = torch.tensor(0.0, requires_grad=True)
-        for idx, (prev, curr) in enumerate(self.prev_curr):
-            if idx == 0:
-                # No incoming flow to compare at the very first step
+        for idx, (p_f, f_s) in enumerate(self.curr):
+            p_f = torch.log(p_f)
+            f_s = torch.log(f_s)
+            if idx == len(self.curr) - 1:
                 continue
-            if idx == len(self.prev_curr) - 1:
-                # Last step is terminal: match incoming flow to reward
-                step_loss = (torch.tensor([prev], dtype=torch.float, requires_grad=True) -
-                             torch.tensor([reward], dtype=torch.float, requires_grad=True)) ** 2
+            f_s_next = torch.log(self.curr[idx + 1][1])
+            if idx == len(self.curr) - 2:
+                step_loss = (f_s + p_f - reward) ** 2
             else:
-                # Intermediate step: match incoming flow and outgoing flow
-                step_loss = (torch.tensor([prev], dtype=torch.float, requires_grad=True) -
-                             torch.tensor([curr], dtype=torch.float, requires_grad=True)) ** 2
-
+                step_loss = (f_s + p_f - f_s_next) ** 2
+            
             loss = loss + step_loss
 
         tqdm.write(f"Detailed balance loss: {loss.item()}")
@@ -129,8 +126,8 @@ class GFNOracle_detailed_balance(nn.Module):
 
         # Reset states after updating
         self.choice_sequence = []
-        self.prev_curr = []
-        self.prev_flow = 0.0  # Reset prev_flow to 0
+        self.curr = []
+        self.p_f= 0.0  # Reset prev_flow to 0
 
 class GFNLearner:
     def __init__(self, hidden_dim, domain):
