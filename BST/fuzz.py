@@ -1,6 +1,6 @@
 import sys
 import random
-from collections import Counter
+import argparse
 from bst import BinarySearchTree
 from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
 from generators.RL import RLOracle
@@ -10,11 +10,6 @@ from generators.GFN_detailed_balance import GFNOracle_detailed_balance
 from generators.GFN_local_search import GFNOracle_local_search
 from generators.GFN_flow_matching import GFNOracle_flow_matching
 from tqdm import tqdm
-
-MAX_DEPTH = 3
-VALUES = range(1, 3)
-LEFT = [True, False]
-RIGHT = [True, False]
 
 
 def generate_tree(oracle, depth=0, pruning=False):
@@ -44,11 +39,13 @@ def generate_tree(oracle, depth=0, pruning=False):
 
 
 def fuzz(oracle, unique_valid=1, valid=1, invalid=0, local_search=False, local_search_steps=None):
+    
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
     invalid_set = set()
     trials = 10000
+
     for i in tqdm(range(trials)):
         tqdm.write("=========")
         tqdm.write("{} trials, {} valids, {} unique valids, {} unique invalids, {:.2f}% unique valids".format(
@@ -84,38 +81,71 @@ def fuzz(oracle, unique_valid=1, valid=1, invalid=0, local_search=False, local_s
 
 
 if __name__ == '__main__':
-    print("====GFN====")
 
-    print("====Random====")
-    oracle_r = RandomOracle([(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    fuzz(oracle_r)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, dest="model", help="Experiment type. RL / FM / TB / DB / LS", default=5)
+    parser.add_argument("--depth", type=int, dest="depth", help="Max depth of the tree", default=3)
+    parser.add_argument("--value_range", type=int, dest="value_range", help="Range of values", default=3)
+    parser.add_argument("--state_abstraction", type=str, dest="state_abstraction", help="State abstraction function", default="left_right_tree")
 
-    # print("====RL: Sequence====")
-    # oracle_s = RLOracle(sequence_ngram_fn(4), epsilon=0.25)
-    # fuzz(oracle_s, unqiue_valid=20, valid=0, invalid=-1)
+    args = parser.parse_args()
 
-    # print("====RL: Tree====")
-    # oracle_t = RLOracle(parent_state_ngram_fn(4, MAX_DEPTH), epsilon=0.25)
-    # fuzz(oracle_t, unqiue_valid=20, valid=0, invalid=-1)
+    MODEL = args.model
+    STATE_ABSTRACTION = args.state_abstraction
+    MAX_DEPTH = args.depth
 
-    # print("====RL: Tree L/R====")
-    # oracle_lrt = RLOracle(
-    #     left_right_parent_state_ngram_fn(4, MAX_DEPTH), domains=[(VALUES, 1), (LEFT, 2), (RIGHT, 3)], epsilon=0.25)
-    # fuzz(oracle_lrt, unique_valid=20, valid=0, invalid=-1)
+    VALUES = range(1, args.value_range + 1)
+    LEFT = [True, False]
+    RIGHT = [True, False]
 
-    # oracle_g = GFNOracle_trajectory_balance(
-    #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    # fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+    domains = [(VALUES, 1), (LEFT, 2), (RIGHT, 3)]
 
-    oracle_g = GFNOracle_detailed_balance(
-        128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+    if MODEL == "RL":
+        if STATE_ABSTRACTION == "random":
+            print("====Random====")
+            oracle_r = RandomOracle(domains)
+            fuzz(oracle_r)
+        
+        elif STATE_ABSTRACTION == "sequence":
+            print("====RL: Sequence====")
+            oracle_s = RLOracle(sequence_ngram_fn(4), domains, epsilon=0.25)
+            fuzz(oracle_s, unique_valid=20, valid=0, invalid=-1)
 
-    # oracle_g = GFNOracle_flow_matching(
-    #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    # fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+        elif STATE_ABSTRACTION == "tree":
+            print("====RL: Tree====")
+            oracle_p = RLOracle(parent_state_ngram_fn(4, MAX_DEPTH), domains, epsilon=0.25)
+            fuzz(oracle_p, unique_valid=20, valid=0, invalid=-1)
 
-    # oracle_g = GFNOracle_local_search(
-    #     128, 128, [(VALUES, 1), (LEFT, 2), (RIGHT, 3)])
-    # fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20, local_search=True, local_search_steps=5)
+        elif STATE_ABSTRACTION == "left_right_tree":
+            print("====RL: Tree L/R====")
+            oracle_lrt = RLOracle(left_right_parent_state_ngram_fn(4, MAX_DEPTH), domains, epsilon=0.25)
+            fuzz(oracle_lrt, unique_valid=20, valid=0, invalid=-1)
+        
+        else:
+            print("Invalid state abstraction function")
+            exit(1)
+    
+    elif MODEL == "FM":
+        oracle_g = GFNOracle_flow_matching(
+            128, 128, domains)
+        fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+
+    elif MODEL == "TB":
+        oracle_g = GFNOracle_trajectory_balance(
+            128, 128, domains)
+        fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+
+    elif MODEL == "DB":
+        oracle_g = GFNOracle_detailed_balance(
+            128, 128, domains)
+        fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20)
+
+    elif MODEL == "LS":
+        oracle_g = GFNOracle_local_search(
+            128, 128, domains)
+        fuzz(oracle_g, unique_valid=1, valid=1, invalid=10e-20, local_search=True, local_search_steps=5)
+    
+    else:
+        print("Invalid model")
+        exit(1)
     
