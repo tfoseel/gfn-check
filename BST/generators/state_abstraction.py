@@ -1,5 +1,5 @@
-# Abstraction functions.
 
+# Abstraction functions.
 def ngram_abstraction_fn(k):
     def ngram_abstractor(state):
         last_k = state[-k:]

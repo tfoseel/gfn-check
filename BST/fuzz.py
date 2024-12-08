@@ -55,13 +55,14 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())
-            # oracle.reward(invalid)
+            oracle.reward(invalid)
 
-        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} invalids)\033[0m / {:.2f}% unique valids".format(
+        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} unique)\033[0m / {:.2f}% unique valids".format(
             i, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
     print("--------Done--------")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -106,9 +107,9 @@ if __name__ == '__main__':
     DOMAINS = [(VALUES, 1), (LEFT, 2), (RIGHT, 3)]
 
     # Rewards
-    UNIQUE_VALID = 1
+    UNIQUE_VALID = 20
     VALID = 1
-    INVALID = 0
+    INVALID = 10e-20
 
     # Fuzz args
     fuzz_kwargs = {
@@ -123,7 +124,8 @@ if __name__ == '__main__':
 
     if MODEL == "RL":
         print()
-        print(f"\033[1m==========Running RL with {STATE_ABSTRACTION} state abstraction function\033[0m==========".format(STATE_ABSTRACTION))
+        print(f"\033[1m==========Running RL with {STATE_ABSTRACTION} state abstraction function\033[0m==========".format(
+            STATE_ABSTRACTION))
         if STATE_ABSTRACTION == "random":
             fuzz_kwargs["oracle"] = RandomOracle(DOMAINS)
 

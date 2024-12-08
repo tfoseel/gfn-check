@@ -12,7 +12,6 @@ class RLOracle:
         self.gamma = gamma
         self.initial_val = initial_val
 
-        idx = 1
         for domain, idx in domains:
             domain = list(domain)
             self.learners[idx] = RLLearner(domain)

@@ -9,18 +9,14 @@ losses = []
 
 
 class GFNOracle_detailed_balance(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
+    def __init__(self, embedding_dim, hidden_dim, domains):
         super(GFNOracle_detailed_balance, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.vocab = dict()
-        self.transformer = transformer
         self.curr = []
-        if transformer:
-            self.hidden_dim = embedding_dim
-            hidden_dim = embedding_dim
 
         # Initialize vocabulary and learners
         vocab_idx = 1
@@ -69,12 +65,8 @@ class GFNOracle_detailed_balance(nn.Module):
         sequence_embeddings = self.embedding_layer(
             torch.tensor(self.encode_choice_sequence(), dtype=torch.long).unsqueeze(0)
         )
-        if self.transformer:
-            hidden = self.transformer_pf(sequence_embeddings)
-            hidden = hidden[:, 0, :]
-        else:
-            _, (hidden, _) = self.lstm_pf(sequence_embeddings)
-            hidden = hidden[-1]  # shape: (1, hidden_dim)
+        hidden = self.transformer_pf(sequence_embeddings)
+        hidden = hidden[:, 0, :]
 
         decision_idx, domain, flows = self.learners[learner_idx].policy(hidden)
         # if len(self.encode_choice_sequence()) == 2:
