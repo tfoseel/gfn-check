@@ -4,7 +4,7 @@ from collections import defaultdict
 
 
 class RLOracle:
-    def __init__(self, abstract_state_fn, domains, epsilon=0.25, gamma=1.0, initial_val=0):
+    def __init__(self, abstract_state_fn, epsilon=0.25, gamma=1.0, initial_val=0):
         self.abstract_state_fn = abstract_state_fn
         self.learners = {}
         self.choice_sequence = []
@@ -12,21 +12,15 @@ class RLOracle:
         self.gamma = gamma
         self.initial_val = initial_val
 
-        idx = 1
-        for domain, idx in domains:
-            domain = list(domain)
-            self.learners[idx] = RLLearner(domain)
-
-    def select(self, idx):
+    def select(self, domain, idx):
         abstract_state = self.abstract_state_fn(self.choice_sequence)
         if not idx in self.learners:
             self.learners[idx] = RLLearner(
                 self.epsilon, self.gamma, self.initial_val)
-        choice = self.learners[idx].policy(abstract_state)
+        choice = self.learners[idx].policy(domain, abstract_state)
         self.choice_sequence.append(choice)
         return choice
 
-    # updates upon full episodes
     def reward(self, reward):
         for learner in self.learners.values():
             learner.reward(reward)
@@ -34,14 +28,13 @@ class RLOracle:
 
 
 class RLLearner:
-    def __init__(self, domain, epsilon=0.25, gamma=1.0, initial_val=0):
+    def __init__(self,  epsilon=0.25, gamma=1.0, initial_val=0):
         self.epsilon = epsilon
         self.gamma = gamma
         self.choice_state_sequence = []
         self.initial_val = initial_val
         self.Q_table = defaultdict(dict)
         self.C_table = defaultdict(dict)
-        self.domain = domain
 
     # updates upon full episodes
     def reward(self, reward):
@@ -73,8 +66,8 @@ class RLLearner:
         except KeyError:
             return self.initial_val
 
-    def policy(self, state):
-        domain = list(self.domain)
+    def policy(self, domain, state):
+        domain = list(domain)
         # Epsilon-greedy strategy
         if np.random.binomial(1, self.epsilon):
             choice = random.choice(domain)

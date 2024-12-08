@@ -1,5 +1,8 @@
 import xml.etree.ElementTree as ET
 import xmlschema
+import json
+
+MAX_DEPTH = 5
 
 
 class POM:
@@ -29,3 +32,48 @@ class POM:
         else:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
+
+
+def generate_pom(oracle, max_depth):
+    with open('config.json', 'r') as file:
+        config = json.load(file)
+        tag_options = config["tags"]
+        text_options = config["texts"]
+        num_children_options = list(range(5))
+
+    def _generate_pom(oracle, node, depth):
+        # Tag part
+        tag = None
+        if node == None:
+            # Base case: most simple form of valid pom.xml
+            tag = ET.Element('project', {
+                'xmlns': 'http://maven.apache.org/POM/4.0.0'
+            })
+            base_children = [("modelVersion", "4.0.0"), ("groupId", "com.example"),
+                             ("artifactId", "my-app"), ("version", "1.0.0")]
+            for t, s in base_children:
+                child = ET.SubElement(tag, t)
+                child.text = s
+        else:
+            tag_name = oracle.select(1)
+            tag = ET.Element(tag_name)
+        # Children part
+        if depth < max_depth:
+            # No empty tree with just one leaf.
+            num_children = oracle.select(2)
+            if num_children > 0:
+                for _ in range(num_children):
+                    child = _generate_pom(oracle, tag, depth + 1)
+                    if child != None:
+                        tag.append(child)
+            else:
+                # Add text (can be also learned by oracle.select(text_options, 3))
+                text = "Leaf text"
+                tag.text = text
+        else:
+            # Add text (can be also learned by oracle.select(text_options, 3))
+            text = "Leaf text"
+            tag.text = text
+        return tag
+    pom = POM(_generate_pom(oracle, None, 0))
+    return pom, 10, pom.valid()

@@ -17,7 +17,7 @@ class RLOracle:
             domain = list(domain)
             self.learners[idx] = RLLearner(domain)
 
-    def select(self, idx):
+    def select(self, domain, idx):
         abstract_state = self.abstract_state_fn(self.choice_sequence)
         if not idx in self.learners:
             self.learners[idx] = RLLearner(
