@@ -6,8 +6,8 @@ from generators.state_abstraction import parent_state_ngram_fn, left_right_paren
 from generators.RL import RLOracle
 from generators.Random import RandomOracle
 
-MAX_DEPTH = 2
-VALUES = range(0, 4)
+MAX_DEPTH = 4
+VALUES = range(0, 11)
 
 
 def generate_tree(depth=0, min_value=-float('inf'), max_value=float('inf')):
@@ -47,7 +47,7 @@ def fuzz(unqiue_valid=0, valid=0, invalid=0):
     print("Starting!", file=sys.stderr)
     sizes = list()
     valid_set = set()
-    trials = 100000
+    trials = 10000
     for i in range(trials):
         print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), (len(valid_set) * 100 / valids) if valids != 0 else 0), end='\r')
