@@ -59,8 +59,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             i, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
-    tqdm.write("\ndone!", file=sys.stderr)
-
+    print("--------Done--------")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -111,6 +110,8 @@ if __name__ == '__main__':
     }
 
     if MODEL == "RL":
+        print()
+        print(f"\033[1m==========Running RL with {STATE_ABSTRACTION} state abstraction function\033[0m==========".format(STATE_ABSTRACTION))
         if STATE_ABSTRACTION == "random":
             fuzz_kwargs["oracle"] = RandomOracle(DOMAINS)
         
