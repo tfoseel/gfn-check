@@ -53,7 +53,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())
-            # oracle.reward(invalid)
+            oracle.reward(invalid)
         
         progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} unique)\033[0m / {:.2f}% unique valids".format(
             i, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
@@ -65,13 +65,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, dest="trials", help="Number of trials", default=10000)
     parser.add_argument("--model", type=str, dest="model", help="Experiment type. RL / FM / TB / DB / LS", default="FM")
-    parser.add_argument("--depth", type=int, dest="depth", help="Max depth of the tree", default=3)
+    parser.add_argument("--depth", type=int, dest="depth", help="Max depth of the tree", default=4)
     parser.add_argument("--value_range", type=int, dest="value_range", help="Range of values", default=10)
     parser.add_argument("--state_abstraction", type=str, dest="state_abstraction", help="State abstraction function", default="left_right_tree")
     parser.add_argument("--local_search_steps", type=int, dest="local_search_steps", help="Number of local search steps", default=5)
     parser.add_argument("--epsilon", type=float, dest="epsilon", help="Epsilon", default=0.25)
-    parser.add_argument("--embedding_dim", type=int, dest="embedding_dim", help="Embedding dimension", default=128)
-    parser.add_argument("--hidden_dim", type=int, dest="hidden_dim", help="Hidden dimension", default=128)
+    parser.add_argument("--embedding_dim", type=int, dest="embedding_dim", help="Embedding dimension", default=64)
+    parser.add_argument("--hidden_dim", type=int, dest="hidden_dim", help="Hidden dimension", default=64)
     parser.add_argument("--verbose", dest="verbose", help="Verbose", action="store_true", default=False)
 
     args = parser.parse_args()
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     # Rewards
     UNIQUE_VALID = 20
     VALID = 1
-    INVALID = 0
+    INVALID = 10e-20
 
     # Fuzz args
     fuzz_kwargs = {
