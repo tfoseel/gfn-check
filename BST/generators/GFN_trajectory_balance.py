@@ -81,7 +81,7 @@ class GFNOracle_trajectory_balance(nn.Module):
     def reward(self, reward):
         loss = (self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward])) * self.beta) ** 2
-        tqdm.write(f"Reward: {reward} Loss: {loss.item()} Z: {math.exp(self.logZ.item())}")
+        # tqdm.write(f"Reward: {reward} Loss: {loss.item()} Z: {math.exp(self.logZ.item())}")
         losses.append(loss.item())
         self.loss = self.loss + loss
         self.num_generation += 1

@@ -77,8 +77,8 @@ class GFNOracle_detailed_balance(nn.Module):
             hidden = hidden[-1]  # shape: (1, hidden_dim)
 
         decision_idx, domain, flows = self.learners[learner_idx].policy(hidden)
-        if len(self.encode_choice_sequence()) == 2:
-            tqdm.write(f"Flows: {str(flows)}")
+        # if len(self.encode_choice_sequence()) == 2:
+        #     tqdm.write(f"Flows: {str(flows)}")
 
         # Track flows
         self.p_f= flows[decision_idx] / flows.sum()
@@ -108,7 +108,7 @@ class GFNOracle_detailed_balance(nn.Module):
             
             loss = loss + step_loss
 
-        tqdm.write(f"Detailed balance loss: {loss.item()}")
+        # tqdm.write(f"Detailed balance loss: {loss.item()}")
         self.num_generation += 1
 
         # Accumulate loss into self.detailed_balance_loss
