@@ -11,9 +11,9 @@ from tqdm import tqdm
 
 losses = []
 
-class GFNOracle_trajectory_balance(nn.Module):
+class GFNOracle_local_search(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains):
-        super(GFNOracle_trajectory_balance, self).__init__()
+        super(GFNOracle_local_search, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
@@ -35,7 +35,6 @@ class GFNOracle_trajectory_balance(nn.Module):
         self.beta = 1
         self.logZ = nn.Parameter(torch.tensor(5.0), requires_grad=True)
         self.logZ_lower = 10
-
         transformer_layer = nn.TransformerEncoderLayer(
             d_model=embedding_dim, nhead=1)
         
@@ -94,11 +93,25 @@ class GFNOracle_trajectory_balance(nn.Module):
             self.optimizer_logZ.step()
             self.loss = torch.tensor(0.0)
             # self.clamp_logZ()
-
         # Reset choice sequence after updating
         self.choice_sequence = []
         self.logPf = torch.tensor(0.0)
-        
+
+    def calculate_depth(self):
+    # Start with depth 0 (root node is at level 0)
+        depth = 0
+        for a, b, _ in self.choice_sequence:
+            if a == 1:
+                # Root node (level 0)
+                depth = max(depth, 0)  # Root is at level 0
+            elif a == 2 and b:
+                # Left child exists, increase depth to level 1
+                depth = max(depth, 1)
+            elif a == 3 and b:
+                # Right child exists, increase depth to level 1
+                depth = max(depth, 1)
+        return depth
+
 
 class GFNLearner:
     def __init__(self, hidden_dim, domain):

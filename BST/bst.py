@@ -58,3 +58,29 @@ class BinarySearchTree:
 
     def __repr__(self):
         return "({} L{} R{})".format(self.value, self.left, self.right)
+
+
+def generate_tree(oracle, MAX_DEPTH, depth=0, pruning=False):
+    num_nodes = 0
+    value = oracle.select(1)
+    tree = BinarySearchTree(value)
+    num_nodes += 1
+
+    if pruning and not tree.valid():
+        return tree, num_nodes, False
+
+    if depth < MAX_DEPTH and oracle.select(2):
+        tree.left, l_num_nodes, validity = generate_tree(oracle, MAX_DEPTH, depth + 1)
+        num_nodes += l_num_nodes
+
+        if pruning and not validity:
+            return tree, num_nodes, False
+
+    if depth < MAX_DEPTH and oracle.select(3):
+        tree.right, r_num_nodes, validity = generate_tree(oracle, MAX_DEPTH, depth + 1)
+        num_nodes += r_num_nodes
+
+        if pruning and not validity:
+            return tree, num_nodes, False
+
+    return tree, num_nodes, tree.valid()

@@ -1,27 +1,22 @@
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
-from collections import defaultdict
-import numpy as np
 import itertools
-import math
-import random
 from tqdm import tqdm
+import math
 
 losses = []
 
-
-class GFNOracle(nn.Module):
+class GFNOracle_flow_matching(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, domains, transformer=True):
-        super(GFNOracle, self).__init__()
+        super(GFNOracle_flow_matching, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.vocab = dict()
         self.transformer = transformer
-        self.Z = torch.tensor(100.0, requires_grad=True)
-        self.prev_flow = self.Z
+        self.prev_flow = torch.Tensor(0)
         self.prev_curr = []
         if transformer:
             self.hidden_dim = embedding_dim
@@ -60,7 +55,6 @@ class GFNOracle(nn.Module):
                 {'params': self.transformer_pf.parameters()},
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
-                {'params': [self.Z], 'lr': 1.0}  # Set lr for self.Z to 1
             ],
             lr=1,  # Default learning rate for other parameters
         )
@@ -82,37 +76,29 @@ class GFNOracle(nn.Module):
             hidden = hidden[-1]  # shape: (1, hidden_dim)
 
         decision_idx, domain, flows = self.learners[learner_idx].policy(hidden)
-        if len(self.encode_choice_sequence()) == 2:
-            tqdm.write(f"Z: {self.Z}, Flows: {str(flows)}")
+        # if len(self.encode_choice_sequence()) == 2:
+        #     tqdm.write(f"Flows: {str(flows)}")
         self.prev_curr.append((self.prev_flow, flows.sum()))
         self.prev_flow = flows[decision_idx]
         self.choice_sequence.append((learner_idx, domain[decision_idx]))
         return domain[decision_idx]
 
-    def compute_flow_matching_loss(self, validity, uniqueness):
+    def reward(self, reward):
         """Compute the flow matching loss based on rewards."""
-        if validity and uniqueness:
-            reward = 10
-        elif validity:
-            reward = 1
-        else:
-            reward = 0
-        reward = torch.log(torch.Tensor([reward]))
-
-
+        reward = math.log(reward)
         loss = torch.tensor(0.0)
-        # tqdm.write(f"Prev curr: {[(x[0].item(), x[1].item()) for x in self.prev_curr]}")
         for idx, (prev, curr) in enumerate(self.prev_curr):
             prev = torch.log(prev)
             curr = torch.log(curr)
+            if idx == 0: # First step
+                continue
             if idx == len(self.prev_curr) - 1: # Last step
                 loss += (curr - reward * self.beta) ** 2
             else:
                 loss += (prev - curr) ** 2
         self.flow_matching_loss += loss
-        tqdm.write(f"Flow matching loss: {loss.item()}")
+        # tqdm.write(f"Flow matching loss: {loss.item()}")
         self.num_generation += 1
-
         if self.num_generation > 0 and self.num_generation % 10 == 0:
             self.optimizer_policy.zero_grad()
             self.flow_matching_loss.backward()
@@ -123,7 +109,6 @@ class GFNOracle(nn.Module):
         # Reset choice sequence after updating
         self.choice_sequence = []
         self.prev_curr = []
-        self.prev_flow = self.Z
 
 class GFNLearner:
     def __init__(self, hidden_dim, domain):
@@ -135,8 +120,5 @@ class GFNLearner:
     def policy(self, hidden):
         flows = F.softplus(self.action_selector(hidden)[0])
         probs = F.softmax(flows, dim=-1)  # Convert to probabilities
-
         sampled_index = torch.multinomial(probs, 1).item()
-
         return sampled_index, self.domain, flows
-

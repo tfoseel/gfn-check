@@ -2,12 +2,9 @@ import sys
 import random
 from collections import Counter
 from bst import BinarySearchTree
-from generators.state_abstraction import parent_state_ngram_fn, left_right_parent_state_ngram_fn, sequence_ngram_fn
-from generators.RL import RLOracle
-from generators.Random import RandomOracle
 
-MAX_DEPTH = 4
-VALUES = range(0, 11)
+MAX_DEPTH = 5
+VALUES = range(0, 10)
 
 
 def generate_tree(depth=0, min_value=-float('inf'), max_value=float('inf')):
@@ -26,23 +23,19 @@ def generate_tree(depth=0, min_value=-float('inf'), max_value=float('inf')):
     # Sample the root value within the valid range
     if len(range(int(min_value) + 1, int(max_value))) == 0:
         return None
-
     value = random.choice(range(int(min_value) + 1, int(max_value)))
     tree = BinarySearchTree(value)
-
     # Decide whether to generate left and right subtrees
     if depth < MAX_DEPTH and random.choice([True, False]):
         # For left child, restrict max value to current node's value
         tree.left = generate_tree(depth + 1, min_value, value)
-
     if depth < MAX_DEPTH and random.choice([True, False]):
         # For right child, restrict min value to current node's value
         tree.right = generate_tree(depth + 1, value, max_value)
-
     return tree
 
 
-def fuzz(unqiue_valid=0, valid=0, invalid=0):
+def fuzz(valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     sizes = list()
