@@ -50,7 +50,7 @@ class GFNOracle_flow_matching(nn.Module):
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
             ],
-            lr=1,  # Default learning rate for other parameters
+            lr=0.001,  # Default learning rate for other parameters
         )
 
     def encode_choice_sequence(self):
@@ -75,11 +75,12 @@ class GFNOracle_flow_matching(nn.Module):
 
     def reward(self, reward):
         """Compute the flow matching loss based on rewards."""
-        reward = math.log(reward)
+        EPS = 1e-8
+        reward = math.log(reward + EPS)
         loss = torch.tensor(0.0)
         for idx, (prev, curr) in enumerate(self.prev_curr):
-            prev = torch.log(prev)
-            curr = torch.log(curr)
+            prev = torch.log(prev + EPS)
+            curr = torch.log(curr + EPS)
             if idx == 0: # First step
                 continue
             if idx == len(self.prev_curr) - 1: # Last step
@@ -87,7 +88,7 @@ class GFNOracle_flow_matching(nn.Module):
             else:
                 loss += (prev - curr) ** 2
         self.flow_matching_loss += loss
-        # tqdm.write(f"Flow matching loss: {loss.item()}")
+        tqdm.write(f"Flow matching loss: {loss.item()}")
         self.num_generation += 1
         if self.num_generation > 0 and self.num_generation % 10 == 0:
             self.optimizer_policy.zero_grad()

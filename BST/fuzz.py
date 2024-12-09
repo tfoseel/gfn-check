@@ -9,10 +9,16 @@ from generators.GFN_detailed_balance import GFNOracle_detailed_balance
 from generators.GFN_local_search import GFNOracle_local_search
 from generators.GFN_flow_matching import GFNOracle_flow_matching
 from tqdm import tqdm
+import torch
+import numpy as np
+import random
+
+random.seed(42)
+np.random.seed(42)
+torch.random.manual_seed(42)
 
 
 def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps, verbose):
-
     valids = 0
     valid_set = set()
     invalid_set = set()
@@ -27,7 +33,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
         if model == "LS":
             assert local_search_steps is not None
 
-            for i in range(local_search_steps):
+            for _ in range(local_search_steps):
                 oracle.choice_sequence = oracle.choice_sequence[:len(
                     oracle.choice_sequence)//2]
                 depth = oracle.calculate_depth()
@@ -39,11 +45,11 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                     break
 
         if verbose:
-            tqdm.write("Tree with {} nodes".format(num_nodes))
+            print("Tree with {} nodes".format(num_nodes))
 
         if validity:
             if verbose:
-                tqdm.write("\033[0;32m" + tree.__repr__() + "\033[0m")
+                print("\033[0;32m" + tree.__repr__() + "\033[0m")
             valids += 1
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
@@ -52,13 +58,13 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 oracle.reward(valid)
         else:
             if verbose:
-                tqdm.write("\033[0;31m" + tree.__repr__() + "\033[0m")
+                print("\033[0;31m" + tree.__repr__() + "\033[0m")
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())
-            # oracle.reward(invalid)
+            oracle.reward(invalid)
 
-        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} invalids)\033[0m / {:.2f}% unique valids".format(
-            i, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
+        progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} unique)\033[0m / {:.2f}% unique valids".format(
+            i + 1, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
     print("--------Done--------")
@@ -71,9 +77,9 @@ if __name__ == '__main__':
     parser.add_argument("--model", type=str, dest="model",
                         help="Experiment type. RL / FM / TB / DB / LS", default="FM")
     parser.add_argument("--depth", type=int, dest="depth",
-                        help="Max depth of the tree", default=3)
+                        help="Max depth of the tree", default=4)
     parser.add_argument("--value_range", type=int,
-                        dest="value_range", help="Range of values", default=3)
+                        dest="value_range", help="Range of values", default=10)
     parser.add_argument("--state_abstraction", type=str, dest="state_abstraction",
                         help="State abstraction function", default="left_right_tree")
     parser.add_argument("--local_search_steps", type=int, dest="local_search_steps",
@@ -81,11 +87,11 @@ if __name__ == '__main__':
     parser.add_argument("--epsilon", type=float,
                         dest="epsilon", help="Epsilon", default=0.25)
     parser.add_argument("--embedding_dim", type=int,
-                        dest="embedding_dim", help="Embedding dimension", default=128)
+                        dest="embedding_dim", help="Embedding dimension", default=8)
     parser.add_argument("--hidden_dim", type=int,
-                        dest="hidden_dim", help="Hidden dimension", default=128)
+                        dest="hidden_dim", help="Hidden dimension", default=8)
     parser.add_argument("--verbose", dest="verbose",
-                        help="Verbose", action="store_true", default=False)
+                        help="Verbose", action="store_true", default=True)
 
     args = parser.parse_args()
 
@@ -109,7 +115,7 @@ if __name__ == '__main__':
     # Rewards
     UNIQUE_VALID = 20
     VALID = 1
-    INVALID = 10e-20
+    INVALID = 10e-10
 
     # Fuzz args
     fuzz_kwargs = {
@@ -152,16 +158,20 @@ if __name__ == '__main__':
             exit(1)
 
     elif MODEL == "FM":
-        fuzz_kwargs["oracle"] = GFNOracle_flow_matching(128, 128, DOMAINS)
+        fuzz_kwargs["oracle"] = GFNOracle_flow_matching(
+            128, 128, DOMAINS, epsilon=EPSILON)
 
     elif MODEL == "TB":
-        fuzz_kwargs["oracle"] = GFNOracle_trajectory_balance(128, 128, DOMAINS)
+        fuzz_kwargs["oracle"] = GFNOracle_trajectory_balance(
+            128, 128, DOMAINS, epsilon=EPSILON)
 
     elif MODEL == "DB":
-        fuzz_kwargs["oracle"] = GFNOracle_detailed_balance(128, 128, DOMAINS)
+        fuzz_kwargs["oracle"] = GFNOracle_detailed_balance(
+            128, 128, DOMAINS, epsilon=EPSILON)
 
     elif MODEL == "LS":
-        fuzz_kwargs["oracle"] = GFNOracle_local_search(128, 128, DOMAINS)
+        fuzz_kwargs["oracle"] = GFNOracle_local_search(
+            128, 128, DOMAINS, epsilon=EPSILON)
         fuzz_kwargs["local_search_steps"] = LS_STEPS
 
     else:

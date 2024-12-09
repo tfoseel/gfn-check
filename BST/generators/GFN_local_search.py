@@ -51,7 +51,7 @@ class GFNOracle_local_search(nn.Module):
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values())), 'lr': 0.001},  # Default learning rate for action selectors
             ],
-            lr=0.01,  # This will act as the default learning rate if not specified explicitly
+            lr=0.001,  # This will act as the default learning rate if not specified explicitly
         )
         self.optimizer_logZ = torch.optim.Adam(
             [{'params': [self.logZ], 'lr': 1}],
