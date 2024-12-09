@@ -2,7 +2,6 @@ import random
 import numpy as np
 from collections import defaultdict
 
-
 class RLOracle:
     def __init__(self, abstract_state_fn, domains, epsilon=0.25, gamma=1.0, initial_val=0):
         self.abstract_state_fn = abstract_state_fn

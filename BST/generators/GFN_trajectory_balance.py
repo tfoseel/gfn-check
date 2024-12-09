@@ -12,7 +12,7 @@ from tqdm import tqdm
 losses = []
 
 class GFNOracle_trajectory_balance(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, domains):
+    def __init__(self, embedding_dim, hidden_dim, domains, epsilon):
         super(GFNOracle_trajectory_balance, self).__init__()
         self.learners = {}
         self.choice_sequence = []
@@ -25,7 +25,7 @@ class GFNOracle_trajectory_balance(nn.Module):
         vocab_idx = 1
         for domain, idx in domains:
             domain = list(domain)
-            self.learners[idx] = GFNLearner(hidden_dim, domain)
+            self.learners[idx] = GFNLearner(hidden_dim, domain, epsilon)
             self.vocab[idx] = dict()
             for x in domain:
                 self.vocab[idx][x] = vocab_idx
@@ -42,17 +42,16 @@ class GFNOracle_trajectory_balance(nn.Module):
         self.transformer_pf = nn.TransformerEncoder(transformer_layer, num_layers=10)
 
         self.logPf = torch.tensor(0.0)
-        self.beta = 10
         self.loss = torch.tensor(0.0)
         self.num_generation = 0
         self.optimizer_policy = torch.optim.Adam(
             [
-                {'params': self.embedding_layer.parameters(), 'lr': 0.001},  # Lower learning rate for embedding layer
-                {'params': self.transformer_pf.parameters(), 'lr': 0.001},    # Default learning rate for transformer_pf
+                {'params': self.embedding_layer.parameters(), 'lr': 0.0001},  # Lower learning rate for embedding layer
+                {'params': self.transformer_pf.parameters(), 'lr': 0.0001},    # Default learning rate for transformer_pf
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values())), 'lr': 0.001},  # Default learning rate for action selectors
             ],
-            lr=0.01,  # This will act as the default learning rate if not specified explicitly
+            lr=0.001,  # This will act as the default learning rate if not specified explicitly
         )
         self.optimizer_logZ = torch.optim.Adam(
             [{'params': [self.logZ], 'lr': 1}],
@@ -81,7 +80,7 @@ class GFNOracle_trajectory_balance(nn.Module):
     def reward(self, reward):
         loss = (self.logPf + self.logZ -
                 torch.log(torch.Tensor([reward])) * self.beta) ** 2
-        # tqdm.write(f"Reward: {reward} Loss: {loss.item()} Z: {math.exp(self.logZ.item())}")
+        print(f"Reward: {reward} Loss: {loss.item()} Z: {math.exp(self.logZ.item())}")
         losses.append(loss.item())
         self.loss = self.loss + loss
         self.num_generation += 1
@@ -101,10 +100,11 @@ class GFNOracle_trajectory_balance(nn.Module):
         
 
 class GFNLearner:
-    def __init__(self, hidden_dim, domain):
+    def __init__(self, hidden_dim, domain, epsilon):
         self.exploration_prob = 1
         self.min_exploration_prob = 0.2
         self.domain = domain
+        self.epsilon = epsilon
         self.action_selector = nn.Linear(
             in_features=hidden_dim, out_features=len(domain))
 
@@ -114,7 +114,7 @@ class GFNLearner:
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
         # epsilon greedy
-        if np.random.binomial(1, 0.5):
+        if np.random.rand() < self.epsilon:
             sampled_index = random.choice(range(len(self.domain)))
         else:
             sampled_index = torch.multinomial(probs, 1).item()

@@ -53,7 +53,7 @@ class GFNOracle_detailed_balance(nn.Module):
                 {'params': itertools.chain(
                     *(learner.action_selector.parameters() for learner in self.learners.values()))},
             ],
-            lr=1,  # Consider lowering this for stability
+            lr=0.001,  # Consider lowering this for stability
         )
 
     def encode_choice_sequence(self):
@@ -80,7 +80,8 @@ class GFNOracle_detailed_balance(nn.Module):
         return domain[decision_idx]
 
     def reward(self, reward):
-        reward = math.log(reward)
+        EPS = 1e-6
+        reward = math.log(reward + EPS)
         # Calculate loss
         # For all steps except the first:
         # - Intermediate steps: (prev_in - curr_out)^2
@@ -88,8 +89,8 @@ class GFNOracle_detailed_balance(nn.Module):
         # prev_in is the incoming flow at that step, curr_out is the outgoing flow
         loss = torch.tensor(0.0, requires_grad=True)
         for idx, (p_f, f_s) in enumerate(self.curr):
-            p_f = torch.log(p_f)
-            f_s = torch.log(f_s)
+            p_f = torch.log(p_f + EPS)
+            f_s = torch.log(f_s + EPS)
             if idx == len(self.curr) - 1:
                 continue
             f_s_next = torch.log(self.curr[idx + 1][1])
