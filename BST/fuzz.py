@@ -22,6 +22,8 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
     valids = 0
     valid_set = set()
     invalid_set = set()
+    depth = {}
+    depths = {i: 0 for i in VALUES}
 
     progress_bar = tqdm(range(trials))
     for i in progress_bar:
@@ -29,6 +31,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             tqdm.write("=========")
 
         tree, num_nodes, validity = generate_tree(oracle, MAX_DEPTH)
+        depths[tree.depth()] += 1
 
         if model == "LS":
             assert local_search_steps is not None
@@ -37,8 +40,8 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 oracle.choice_sequence = oracle.choice_sequence[:len(
                     oracle.choice_sequence)//2]
                 depth = oracle.calculate_depth()
-                new_tree, new_num_nodes, new_validity = generate_tree(
-                    oracle, MAX_DEPTH, depth)
+                new_tree, new_num_nodes, new_validity = generate_tree(oracle, MAX_DEPTH, depth)
+                depths[tree.depth()] += 1
 
                 if validity and tree.__repr__() not in valid_set:
                     tree, num_nodes, validity = new_tree, new_num_nodes, new_validity
@@ -67,6 +70,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             i + 1, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
+    print("Depth distribution: {}".format(depths))
     print("--------Done--------")
 
 
@@ -113,7 +117,7 @@ if __name__ == '__main__':
     DOMAINS = [(VALUES, 1), (LEFT, 2), (RIGHT, 3)]
 
     # Rewards
-    UNIQUE_VALID = 20
+    UNIQUE_VALID = 1
     VALID = 1
     INVALID = 10e-10
 
