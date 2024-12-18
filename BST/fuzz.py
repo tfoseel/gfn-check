@@ -13,12 +13,12 @@ import torch
 import numpy as np
 import random
 
-random.seed(0)
-np.random.seed(0)
-torch.random.manual_seed(0)
-torch.manual_seed(0)
-torch.cuda.manual_seed(0)
-torch.cuda.manual_seed_all(0)
+random.seed(2)
+np.random.seed(2)
+torch.random.manual_seed(2)
+torch.manual_seed(2)
+torch.cuda.manual_seed(2)
+torch.cuda.manual_seed_all(2)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = False
@@ -36,7 +36,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             tqdm.write("=========")
 
         tree, num_nodes, validity = generate_tree(oracle, MAX_DEPTH)
-        depths[tree.depth()] += 1
+        
 
         if model == "LS":
             assert local_search_steps is not None
@@ -57,6 +57,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             print("Tree with {} nodes".format(num_nodes))
 
         if validity:
+            depths[tree.depth()] += 1
             if verbose:
                 print("\033[0;32m" + tree.__repr__() + "\033[0m")
             valids += 1
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument("--model", type=str, dest="model",
                         help="Experiment type. RL / FM / TB / DB / LS", default="FM")
     parser.add_argument("--depth", type=int, dest="depth",
-                        help="Max depth of the tree", default=4)
+                        help="Max depth of the tree", default=3)
     parser.add_argument("--value_range", type=int,
                         dest="value_range", help="Range of values", default=10)
     parser.add_argument("--state_abstraction", type=str, dest="state_abstraction",

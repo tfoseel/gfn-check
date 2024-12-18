@@ -54,7 +54,7 @@ class GFNOracle_trajectory_balance(nn.Module):
             lr=0.001,  # This will act as the default learning rate if not specified explicitly
         )
         self.optimizer_logZ = torch.optim.Adam(
-            [{'params': [self.logZ], 'lr': 0.1}],
+            [{'params': [self.logZ], 'lr': 1}],
         )
 
     def clamp_logZ(self):
