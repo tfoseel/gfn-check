@@ -50,11 +50,11 @@ class GFNOracle_trajectory_balance(nn.Module):
         self.optimizer_policy = torch.optim.Adam(
             [
                 # Lower learning rate for embedding layer
-                {'params': self.embedding_layer.parameters(), 'lr': 0.000001},
+                {'params': self.embedding_layer.parameters()},
                 # Default learning rate for transformer_pf
-                {'params': self.transformer_pf.parameters(), 'lr': 0.000001},
+                {'params': self.transformer_pf.parameters()},
                 {'params': itertools.chain(
-                    *(learner.action_selector.parameters() for learner in self.learners.values())), 'lr': 0.00001},  # Default learning rate for action selectors
+                    *(learner.action_selector.parameters() for learner in self.learners.values()))},  # Default learning rate for action selectors
             ],
             lr=0.00001,  # This will act as the default learning rate if not specified explicitly
         )

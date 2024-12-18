@@ -13,15 +13,23 @@ import torch
 import numpy as np
 import random
 
-random.seed(42)
-np.random.seed(42)
-torch.random.manual_seed(42)
+random.seed(2)
+np.random.seed(2)
+torch.random.manual_seed(2)
+torch.manual_seed(2)
+torch.cuda.manual_seed(2)
+torch.cuda.manual_seed_all(2)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.enabled = False
 
 
 def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps, verbose):
     valids = 0
     valid_set = set()
     invalid_set = set()
+    depth = {}
+    depths = {i: 0 for i in range(1, MAX_DEPTH + 2)}
 
     progress_bar = tqdm(range(trials))
     for i in progress_bar:
@@ -36,9 +44,11 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             for _ in range(local_search_steps):
                 oracle.choice_sequence = oracle.choice_sequence[:len(
                     oracle.choice_sequence)//2]
-                depth = oracle.calculate_depth()
+                depth = oracle.compute_tree_depth(
+                    oracle.choice_sequence, MAX_DEPTH)
                 new_tree, new_num_nodes, new_validity = generate_tree(
                     oracle, MAX_DEPTH, depth)
+                depths[tree.depth()] += 1
 
                 if validity and tree.__repr__() not in valid_set:
                     tree, num_nodes, validity = new_tree, new_num_nodes, new_validity
@@ -48,9 +58,14 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             print("Tree with {} nodes".format(num_nodes))
 
         if validity:
+            depths[tree.depth()] += 1
             if verbose:
                 print("\033[0;32m" + tree.__repr__() + "\033[0m")
             valids += 1
+            # if tree.depth() >= MAX_DEPTH //2:
+            #     if tree.__repr__() not in valid_set:
+            #         valid_set.add(tree.__repr__())
+            #     oracle.reward(20)
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
                 oracle.reward(unique_valid)
@@ -67,6 +82,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             i + 1, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
+    print("Depth distribution: {}".format(depths))
     print("--------Done--------")
 
 
@@ -77,7 +93,7 @@ if __name__ == '__main__':
     parser.add_argument("--model", type=str, dest="model",
                         help="Experiment type. RL / FM / TB / DB / LS", default="FM")
     parser.add_argument("--depth", type=int, dest="depth",
-                        help="Max depth of the tree", default=4)
+                        help="Max depth of the tree", default=3)
     parser.add_argument("--value_range", type=int,
                         dest="value_range", help="Range of values", default=10)
     parser.add_argument("--state_abstraction", type=str, dest="state_abstraction",
@@ -115,7 +131,18 @@ if __name__ == '__main__':
     # Rewards
     UNIQUE_VALID = 1
     VALID = 1
-    INVALID = 10e-5
+    INVALID = 10e-20
+    if MODEL == "RL" and UNIQUE_VALID == 1:
+        print("Are you sure you want to run RL with reward 1 for unique valids?")
+        user_input = input("y/n: ")
+        if user_input != "y":
+            exit(1)
+    elif MODEL != "RL" and UNIQUE_VALID == 20:
+        print("Are you sure you want to run {} with reward 20 for unique valids?".format(
+            MODEL))
+        user_input = input("y/n: ")
+        if user_input != "y":
+            exit(1)
 
     # Fuzz args
     fuzz_kwargs = {

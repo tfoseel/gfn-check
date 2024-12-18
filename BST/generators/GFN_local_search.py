@@ -12,7 +12,7 @@ from tqdm import tqdm
 losses = []
 
 class GFNOracle_local_search(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, domains):
+    def __init__(self, embedding_dim, hidden_dim, domains, epsilon):
         super(GFNOracle_local_search, self).__init__()
         self.learners = {}
         self.choice_sequence = []
@@ -20,12 +20,13 @@ class GFNOracle_local_search(nn.Module):
         self.hidden_dim = hidden_dim
         self.vocab = dict()
         self.hidden_dim = embedding_dim
+        self.epsilon = epsilon
         hidden_dim = embedding_dim
         # 1 for embedding for empty sequence, and the other is total vocabulary size
         vocab_idx = 1
         for domain, idx in domains:
             domain = list(domain)
-            self.learners[idx] = GFNLearner(hidden_dim, domain)
+            self.learners[idx] = GFNLearner(hidden_dim, domain, epsilon)
             self.vocab[idx] = dict()
             for x in domain:
                 self.vocab[idx][x] = vocab_idx
@@ -112,22 +113,51 @@ class GFNOracle_local_search(nn.Module):
                 depth = max(depth, 1)
         return depth
 
+    def compute_tree_depth(self, sequence, max_depth):
+        def parse_subtree(index, depth):
+            idx, choice, _ = sequence[index]
+            assert idx == 1
+            index += 1
+
+            node_depth = depth
+
+            if depth < max_depth:
+                idx, left_bool, _ = sequence[index]
+                assert idx == 2
+                index += 1
+
+                left_depth = depth
+                if left_bool:
+                    left_depth, index = parse_subtree(index, depth + 1)
+
+                idx, right_bool, _ = sequence[index]
+                assert idx == 3
+                index += 1
+
+                right_depth = depth
+                if right_bool:
+                    right_depth, index = parse_subtree(index, depth + 1)
+
+                node_depth = max(left_depth, right_depth, node_depth)
+
+            return node_depth, index
+
+        tree_depth, _ = parse_subtree(0, 1)
+        return tree_depth
 
 class GFNLearner:
-    def __init__(self, hidden_dim, domain):
+    def __init__(self, hidden_dim, domain, epsilon):
         self.exploration_prob = 1
-        self.min_exploration_prob = 0.2
         self.domain = domain
+        self.epsilon = epsilon
         self.action_selector = nn.Linear(
             in_features=hidden_dim, out_features=len(domain))
 
     def policy(self, hidden):
-        if self.exploration_prob > self.min_exploration_prob:
-            self.exploration_prob *= 0.9995
         output = self.action_selector(hidden)
         probs = F.softmax(output, dim=-1)  # Convert to probabilities
         # epsilon greedy
-        if np.random.binomial(1, 0.5):
+        if random.random() < self.exploration_prob:
             sampled_index = random.choice(range(len(self.domain)))
         else:
             sampled_index = torch.multinomial(probs, 1).item()
