@@ -5,15 +5,66 @@ from student import Student, generate_student
 from generators.state_abstraction import sequence_ngram_fn, parent_state_ngram_fn, index_parent_state_ngram_fn
 from generators.Random import RandomOracle
 from generators.RL import RLOracle
-from generators.GFN_trajectory_balance import GFNOracle_trajectory_balance
-from generators.GFN_detailed_balance import GFNOracle_detailed_balance
-from generators.GFN_local_search import GFNOracle_local_search
-from generators.GFN_flow_matching import GFNOracle_flow_matching
-from tqdm import tqdm
 
 
-def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps, verbose):
+MAX_DEPTH = 6
 
+with open('config.json', 'r') as file:
+    config = json.load(file)
+    tag_options = config["tags"]
+    text_options = config["texts"]
+    num_attributes_options = list(range(5))
+    boolean_options = [True, False]
+    num_children_options = list(range(5))
+
+
+def generate_student(oracle):
+    def _generate_student(oracle, node, depth):
+        # Tag part
+        tag = None
+        if node == None:
+            tag = ET.Element('student')
+        else:
+            tag_name = oracle.select(tag_options, None)
+            tag = ET.Element(tag_name)
+        # Children part
+        if depth < MAX_DEPTH:
+            num_children = oracle.select(
+                num_children_options[0 if node is not None else 1:], 2)
+            if num_children > 0:
+                for _ in range(num_children):
+                    child = _generate_student(oracle, tag, depth + 1)
+                    if child != None:
+                        tag.append(child)
+            else:
+                # Add text
+                text = random.choice(text_options)
+                tag.text = text
+        else:
+            # Add text
+            text = random.choice(text_options)
+            tag.text = text
+        return tag
+
+    student = _generate_student(oracle, None, 0)
+    return Student(student)
+
+
+def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
+
+
+MAX_DEPTH = 6
+
+with open('config.json', 'r') as file:
+    config = json.load(file)
+    tag_options = config["tags"]
+    text_options = config["texts"]
+    num_attributes_options = list(range(5))
+    boolean_options = [True, False]
+    num_children_options = list(range(5))
+
+
+def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     valid_set = set()
     invalid_set = set()
