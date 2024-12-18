@@ -12,6 +12,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 import random
+from collections import defaultdict
 
 random.seed(42)
 np.random.seed(42)
@@ -22,6 +23,8 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
     valids = 0
     valid_set = set()
     invalid_set = set()
+    num_valid = []
+    num_unique_valid = []
 
     progress_bar = tqdm(range(trials))
     for i in progress_bar:
@@ -63,10 +66,16 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 invalid_set.add(tree.__repr__())
             oracle.reward(invalid)
 
+        num_valid.append(valids)
+        num_unique_valid.append(len(valid_set))
+
         progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} unique)\033[0m / {:.2f}% unique valids".format(
             i + 1, valids, len(valid_set), i + 1 - valids, len(invalid_set), (len(valid_set)*100/valids if valids != 0 else 0)))
 
     sizes = [valid_tree.count("(") for valid_tree in valid_set]
+    with open('result.npy', 'wb') as f:
+        np.save(f, np.array(num_valid))
+        np.save(f, np.array(num_unique_valid))
     print("--------Done--------")
 
 
@@ -113,9 +122,9 @@ if __name__ == '__main__':
     DOMAINS = [(VALUES, 1), (LEFT, 2), (RIGHT, 3)]
 
     # Rewards
-    UNIQUE_VALID = 1
+    UNIQUE_VALID = 20
     VALID = 1
-    INVALID = 10e-5
+    INVALID = -1
 
     # Fuzz args
     fuzz_kwargs = {
@@ -159,7 +168,7 @@ if __name__ == '__main__':
 
     elif MODEL == "FM":
         fuzz_kwargs["oracle"] = GFNOracle_flow_matching(
-            128, 128, DOMAINS, epsilon=EPSILON)
+            128, 128, DOMAINS)
 
     elif MODEL == "TB":
         fuzz_kwargs["oracle"] = GFNOracle_trajectory_balance(
