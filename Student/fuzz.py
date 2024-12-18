@@ -53,6 +53,20 @@ def generate_student(oracle):
 
 
 def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
+
+
+MAX_DEPTH = 6
+
+with open('config.json', 'r') as file:
+    config = json.load(file)
+    tag_options = config["tags"]
+    text_options = config["texts"]
+    num_attributes_options = list(range(5))
+    boolean_options = [True, False]
+    num_children_options = list(range(5))
+
+
+def fuzz(oracle, unqiue_valid=0, valid=0, invalid=0):
     valids = 0
     print("Starting!", file=sys.stderr)
     valid_set = set()
