@@ -34,8 +34,8 @@ class GFNOracle_trajectory_balance(nn.Module):
         num_embeddings = 1 + sum(map(lambda d: len(d[0]), domains))
         self.embedding_layer = nn.Embedding(num_embeddings, embedding_dim)
         self.beta = 1
-        self.logZ = nn.Parameter(
-            torch.log(torch.tensor(14.0)), requires_grad=False)
+        # self.logZ = nn.Parameter(torch.tensor(5.0), requires_grad=True)
+        self.logZ = nn.Parameter(torch.tensor(600.0), requires_grad=False)
         self.logZ_lower = 10
 
         transformer_layer = nn.TransformerEncoderLayer(
