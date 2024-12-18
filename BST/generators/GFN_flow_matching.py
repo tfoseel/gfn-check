@@ -4,16 +4,18 @@ import torch
 import itertools
 from tqdm import tqdm
 import math
+import random
 
 losses = []
 
 class GFNOracle_flow_matching(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, domains):
+    def __init__(self, embedding_dim, hidden_dim, domains, epsilon):
         super(GFNOracle_flow_matching, self).__init__()
         self.learners = {}
         self.choice_sequence = []
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
+        self.epsilon = epsilon
         self.vocab = dict()
         self.prev_flow = torch.Tensor(0)
         self.prev_curr = []
@@ -22,7 +24,7 @@ class GFNOracle_flow_matching(nn.Module):
         vocab_idx = 1
         for domain, idx in domains:
             domain = list(domain)
-            self.learners[idx] = GFNLearner(self.hidden_dim, domain)
+            self.learners[idx] = GFNLearner(self.hidden_dim, domain, self.epsilon)
             self.vocab[idx] = dict()
             for x in domain:
                 self.vocab[idx][x] = vocab_idx
@@ -102,7 +104,7 @@ class GFNOracle_flow_matching(nn.Module):
         self.prev_curr = []
 
 class GFNLearner:
-    def __init__(self, hidden_dim, domain):
+    def __init__(self, hidden_dim, domain, epsilon):
         self.min_exploration_prob = 0.2
         self.domain = domain
         self.action_selector = nn.Linear(
@@ -111,5 +113,8 @@ class GFNLearner:
     def policy(self, hidden):
         flows = F.softplus(self.action_selector(hidden)[0])
         probs = F.softmax(flows, dim=-1)  # Convert to probabilities
-        sampled_index = torch.multinomial(probs, 1).item()
+        if random.random() < self.min_exploration_prob:
+            sampled_index = random.randint(0, len(self.domain) - 1)
+        else:
+            sampled_index = torch.multinomial(probs, 1).item()
         return sampled_index, self.domain, flows

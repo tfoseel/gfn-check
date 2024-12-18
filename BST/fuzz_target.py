@@ -3,8 +3,8 @@ import random
 from collections import Counter
 from bst import BinarySearchTree
 
-MAX_DEPTH = 5
-VALUES = range(0, 10)
+MAX_DEPTH = 3
+VALUES = range(1, 4)
 
 
 def generate_tree(depth=0, min_value=-float('inf'), max_value=float('inf')):
@@ -40,7 +40,7 @@ def fuzz(valid=0, invalid=0):
     print("Starting!", file=sys.stderr)
     sizes = list()
     valid_set = set()
-    trials = 10000
+    trials = 100000
     for i in range(trials):
         print("{} trials, {} valids, {} unique valids, {:.2f}% unique valids".format(
             i, valids, len(valid_set), (len(valid_set) * 100 / valids) if valids != 0 else 0), end='\r')

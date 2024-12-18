@@ -13,10 +13,9 @@ import torch
 import numpy as np
 import random
 
-random.seed(42)
-np.random.seed(42)
-torch.random.manual_seed(42)
-
+random.seed(0)
+np.random.seed(0)
+torch.random.manual_seed(0)
 
 def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps, verbose):
     valids = 0
@@ -39,7 +38,8 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             for _ in range(local_search_steps):
                 oracle.choice_sequence = oracle.choice_sequence[:len(
                     oracle.choice_sequence)//2]
-                depth = oracle.calculate_depth()
+                depth = oracle.compute_tree_depth(
+                    oracle.choice_sequence, MAX_DEPTH)
                 new_tree, new_num_nodes, new_validity = generate_tree(oracle, MAX_DEPTH, depth)
                 depths[tree.depth()] += 1
 
@@ -119,7 +119,18 @@ if __name__ == '__main__':
     # Rewards
     UNIQUE_VALID = 1
     VALID = 1
-    INVALID = 10e-10
+    INVALID = 10e-20
+    if MODEL == "RL" and UNIQUE_VALID == 1:
+        print("Are you sure you want to run RL with reward 1 for unique valids?")
+        user_input = input("y/n: ")
+        if user_input != "y":
+            exit(1)
+    elif MODEL != "RL" and UNIQUE_VALID == 20:
+        print("Are you sure you want to run {} with reward 20 for unique valids?".format(
+            MODEL))
+        user_input = input("y/n: ")
+        if user_input != "y":
+            exit(1)
 
     # Fuzz args
     fuzz_kwargs = {
