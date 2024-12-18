@@ -1,5 +1,18 @@
 import xml.etree.ElementTree as ET
 import xmlschema
+import json
+import random
+
+
+MAX_DEPTH = 3
+
+with open('config.json', 'r') as file:
+    config = json.load(file)
+    tag_options = config["tags"]
+    text_options = config["texts"]
+    num_attributes_options = list(range(5))
+    boolean_options = [True, False]
+    num_children_options = list(range(5))
 
 
 class Student:
@@ -32,3 +45,34 @@ class Student:
     def __repr__(self):
         self.indent(self.xml)
         return ET.tostring(self.xml, encoding='unicode')
+
+
+def generate_student(oracle, max_depth):
+    def _generate_student(oracle, node, depth):
+        # Tag part
+        tag = None
+        if node == None:
+            tag = ET.Element('student')
+        else:
+            tag_name = oracle.select(1)
+            tag = ET.Element(tag_name)
+        # Children part
+        if depth < MAX_DEPTH:
+            num_children = oracle.select(2)
+            if num_children > 0:
+                for _ in range(num_children):
+                    child = _generate_student(oracle, tag, depth + 1)
+                    if child != None:
+                        tag.append(child)
+            else:
+                # Add text
+                text = random.choice(text_options)
+                tag.text = text
+        else:
+            # Add text
+            text = random.choice(text_options)
+            tag.text = text
+        return tag
+
+    student = Student(_generate_student(oracle, None, 0))
+    return student, 0, student.valid()
