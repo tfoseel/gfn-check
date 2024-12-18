@@ -13,12 +13,12 @@ import torch
 import numpy as np
 import random
 
-random.seed(2)
-np.random.seed(2)
-torch.random.manual_seed(2)
-torch.manual_seed(2)
-torch.cuda.manual_seed(2)
-torch.cuda.manual_seed_all(2)
+random.seed(0)
+np.random.seed(0)
+torch.random.manual_seed(0)
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
+torch.cuda.manual_seed_all(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = False
@@ -36,6 +36,10 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             tqdm.write("=========")
 
         tree, num_nodes, validity = generate_tree(oracle, MAX_DEPTH)
+        ### do not use small trees (depth > 2)
+        while tree.depth() < 2:
+            tree, num_nodes, validity = generate_tree(oracle, MAX_DEPTH)
+            
         
 
         if model == "LS":
@@ -61,10 +65,9 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             if verbose:
                 print("\033[0;32m" + tree.__repr__() + "\033[0m")
             valids += 1
-            # if tree.depth() >= MAX_DEPTH //2:
-            #     if tree.__repr__() not in valid_set:
-            #         valid_set.add(tree.__repr__())
-            #     oracle.reward(20)
+            depth = tree.depth()
+            # valid = 100 ** (depth - 1) - 0.999999
+            # if depth >= 2:
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
                 oracle.reward(unique_valid)
@@ -75,6 +78,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
                 print("\033[0;31m" + tree.__repr__() + "\033[0m")
             if tree.__repr__() not in invalid_set:
                 invalid_set.add(tree.__repr__())
+            
             oracle.reward(invalid)
 
         progress_bar.set_description("{} trials / \033[92m{} valids ({} unique)\033[0m / \033[0;31m{} invalids ({} unique)\033[0m / {:.2f}% unique valids".format(
