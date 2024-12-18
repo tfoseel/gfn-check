@@ -22,7 +22,7 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
     valid_set = set()
     invalid_set = set()
     depth = {}
-    depths = {i: 0 for i in VALUES}
+    depths = {i: 0 for i in range(1, MAX_DEPTH + 2)}
 
     progress_bar = tqdm(range(trials))
     for i in progress_bar:
@@ -54,6 +54,10 @@ def fuzz(oracle, trials, unique_valid, valid, invalid, model, local_search_steps
             if verbose:
                 print("\033[0;32m" + tree.__repr__() + "\033[0m")
             valids += 1
+            # if tree.depth() >= MAX_DEPTH //2:
+            #     if tree.__repr__() not in valid_set:
+            #         valid_set.add(tree.__repr__())
+            #     oracle.reward(20)
             if tree.__repr__() not in valid_set:
                 valid_set.add(tree.__repr__())
                 oracle.reward(unique_valid)
