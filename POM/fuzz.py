@@ -81,7 +81,7 @@ if __name__ == '__main__':
     parser.add_argument("--local_search_steps", type=int, dest="local_search_steps",
                         help="Number of local search steps", default=5)
     parser.add_argument("--epsilon", type=float,
-                        dest="epsilon", help="Epsilon", default=0.25)
+                        dest="epsilon", help="Epsilon", default=1)
     parser.add_argument("--embedding_dim", type=int,
                         dest="embedding_dim", help="Embedding dimension", default=128)
     parser.add_argument("--hidden_dim", type=int,
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     DOMAINS = [(TAGS, 1), (NUM_CHILDRENS, 2)]
 
     # Rewards
-    UNIQUE_VALID = 20
+    UNIQUE_VALID = 1
     VALID = 1
     INVALID = -1
 

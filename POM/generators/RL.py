@@ -4,7 +4,7 @@ from collections import defaultdict
 
 
 class RLOracle:
-    def __init__(self, abstract_state_fn, domains, epsilon=0.25, gamma=1.0, initial_val=0):
+    def __init__(self, abstract_state_fn, domains, epsilon, gamma=1.0, initial_val=0):
         self.abstract_state_fn = abstract_state_fn
         self.learners = {}
         self.choice_sequence = []
@@ -15,7 +15,7 @@ class RLOracle:
         idx = 1
         for domain, idx in domains:
             domain = list(domain)
-            self.learners[idx] = RLLearner(domain)
+            self.learners[idx] = RLLearner(domain, epsilon=epsilon)
 
     def select(self, idx):
         abstract_state = self.abstract_state_fn(self.choice_sequence)
@@ -34,7 +34,7 @@ class RLOracle:
 
 
 class RLLearner:
-    def __init__(self, domain, epsilon=0.25, gamma=1.0, initial_val=0):
+    def __init__(self, domain, epsilon, gamma=1.0, initial_val=0):
         self.epsilon = epsilon
         self.gamma = gamma
         self.choice_state_sequence = []
